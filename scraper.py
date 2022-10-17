@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup, SoupStrainer
 import requests
 import re
 import os
-from urllib.parse import urljoin
+from urllib.parse import MAX_CACHE_SIZE, urljoin
 from urllib.request import urlretrieve
 import itertools
 
@@ -12,8 +12,61 @@ ACL_URL = "https://aclanthology.org"
 VENUE_SUFFIX = "/venues/"
 MAX_PDF_COUNT = 200
 DOWNLOADS_DIR = "data/"
+START_YEAR = 22
+END_YEAR = 0
+PAPERS_PER_PROCEEDING = 5
+
+def retrieve_url(url):
+    html_doc = requests.get(url)
+    return BeautifulSoup(html_doc.content, 'html.parser')
+
+
+def download_pdf(url):
+    if url.startswith(ACL_URL):
+        urlretrieve(url, os.path.join(DOWNLOADS_DIR, url.rsplit('/', 1)[-1]))
+        return True
+    return False
+
+def parse_acl():
+    """
+        Parse home page by year
+    """
+    pdf_count = 0
+
+    soup = retrieve_url(ACL_URL)
+
+    acl_table = soup.find("table")
+    os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+    for year in range(START_YEAR, END_YEAR-1, -1):
+        # acl_table.findAll("a", {"text": str(year).zfill(2)})
+        venues = acl_table.findAll('a', href=True, text=str(year).zfill(2))
+        venue_hrefs = [venue['href'] for venue in venues]
+        for venue_href in venue_hrefs:
+            venue_soup = retrieve_url(urljoin(ACL_URL, venue_href))
+            print(venue_href)
+            buttons = venue_soup.select("button#toggle-all-abstracts")
+            if buttons == []:
+                proceedings = venue_soup.find_all_next("div", attrs={'class' : None}, recursive=False)
+            else:
+                proceedings = buttons[0].find_all_next("div", attrs={'class' : None}, recursive=False) # Get all proceedings
+            for proceeding in proceedings:
+                if pdf_count < MAX_PDF_COUNT:
+                    papers = proceeding.findChildren("p")[1:PAPERS_PER_PROCEEDING+1]
+                    pdf_links = [paper.find('a').get('href') for paper in papers]
+                    downloaded = list((map(download_pdf, pdf_links)))
+                    valid_pdfs = list(filter(lambda status: status, downloaded))
+                    # len(valid_pdfs) != len(pdf_links) and print(valid_pdfs)
+                    pdf_count += len(valid_pdfs)
+
+
+
+
+
 
 def parse_acl_home_page():
+    """
+        Parse home page by venue
+    """
     pdf_count = 0
     html_doc = requests.get(ACL_URL)
     soup = BeautifulSoup(html_doc.content, 'html.parser')
@@ -36,6 +89,7 @@ def parse_acl_home_page():
         # TODO: yield links here
 
         for proceeding_link in proceeding_links:
+            print(proceeding_link)
             proceeding_content = requests.get(urljoin(ACL_URL, proceeding_link)).content
             proceeding_soup = BeautifulSoup(proceeding_content, 'html.parser')
             button = proceeding_soup.select("button#toggle-all-abstracts")[0]
@@ -64,8 +118,9 @@ def parse_acl_home_page():
             
         
         
-    print(event_links)
     # tags = tables[0].findAll(lambda tag: tag.name=='tr')
     # tds = list(map(lambda tag: tag.findAll("td"), tags))
 
-parse_acl_home_page()
+
+parse_acl()
+# parse_acl_home_page()
