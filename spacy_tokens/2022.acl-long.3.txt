@@ -1,0 +1,589 @@
+Rare Tokens Degenerate All Tokens : Improving Neural Text Generation via Adaptive Gradient Gating for Rare Token Embeddings Sangwon Yu1
+Jongyoon Song1 Heeseung Kim1 Seong - min Lee3 Woo - Jong Ryu3 Sungroh Yoon1,2,∗ 1 Data Science & AI Laboratory , Seoul National University , Korea 2 ASRI , ECE , GSAI , and INMC , Seoul National University , Korea 3 AIRS Company , Hyundai Motor Group , Korea { dbtkddnjs96 , coms1580 , gmltmds789 , sryoon}@snu.ac.kr { blueworm7 , woojong.ryu}@hyundai.com
+Abstract matrix ( Merity et al. , 2017 ; Yang et al. , 2018 ; Press and Wolf , 2017 ) .
+Recent studies have determined that the learned embedding distribution is biased in a common direction , thereby resulting in a narrow cone - shaped anisotropy ( Mu and Viswanath , 2018 ; Ethayarajh , 2019 ; Gao et al. , 2019 ; Biś et al. , 2021 ) .
+This phenomenon , named the representation degeneration problem by Gao et al. ( 2019 ) , increases the overall similarity between embeddings , and leads to a problem in which the expressiveness of the token embeddings decreases .
+Therefore , it is difficult for the model to learn the semantic relationship between the tokens and to generate high quality texts .
+Existing studies addressing this problem suggest methods that apply post - processing or regularization techniques to all token embeddings based on the observed phenomena owing to the degeneration problem ( Mu and Viswanath , 2018 ; Gao et al. , 2019 ; Wang et al. , 2019 ; Wang et al. , 2020 ; Biś et al. , 2021 ) .
+Although these works improve the quality of token embeddings and generated texts , it is still not clear how token embeddings become degenerate during training procedure .
+Also , there exists the problem of over regularization for the token embeddings whose semantic relationships are trained well because the above methods are applied for all token embeddings .
+Recent studies have determined that the learned token embeddings of large - scale neural language models are degenerated to be anisotropic with a narrow - cone shape .
+This phenomenon , called the representation degeneration problem , facilitates an increase in the overall similarity between token embeddings that negatively affect the performance of the models .
+Although the existing methods that address the degeneration problem based on observations of the phenomenon triggered by the problem improves the performance of the text generation , the training dynamics of token embeddings behind the degeneration problem are still not explored .
+In this study , we analyze the training dynamics of the token embeddings focusing on rare token embedding .
+We demonstrate that the specific part of the gradient for rare token embeddings is the key cause of the degeneration problem for all tokens during training stage .
+Based on the analysis , we propose a novel method called , adaptive gradient gating ( AGG ) .
+AGG addresses the degeneration problem by gating the specific part of the gradient for rare token embeddings .
+Experimental results from language modeling , word similarity , and machine translation tasks quantitatively and qualitatively verify the effectiveness of AGG .
+1 Introduction
+In this study , we conduct empirical studies about training dynamics of token embeddings , focusing on rare token embeddings .
+By observing the initial training dynamics of token embeddings grouped based on appearance frequency , we hypothesize that the degeneration of the rare token embeddings triggers the degeneration of the embeddings of the remaining tokens .
+We show that the entire degeneration problem is mitigated by only freezing rare tokens during training , and we demonstrate that the main cause of the entire degeneration problem is the specific part of the gradient for rare token em Neural language models have been developed with various architectures during recent years ( Graves , 2013 ; Bahdanau et al. , 2015 ; Gehring et al. , 2017 ; Vaswani et al. , 2017 ) .
+Despite the improvement in model architectures , models usually share the same process for input and output .
+They process token embeddings as inputs to compute contextualized features and subsequently project the features into a categorical distribution of tokens at the output softmax layer whose weight is token embedding ∗
+Corresponding author .
+29 Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics Volume 1 : Long Papers , pages 29 - 45 May 22 - 27 , 2022 c 2022 Association for Computational Linguistics  ( a ) Training step 100 ( b ) Training step 500 ( c ) Training step 1500 ( d ) Training step 3500 Figure 1 : Visualization of token embeddings of language model trained on WikiText-103 .
+Red , green , and blue points represent rare , medium , and frequent groups respecively .
+( a ) , ( b ) , ( c ) , ( d ) present a visualization of each training step .
+by ( x , y < t ) , and θ denotes model parameters , which is defined as follows .
+beddings .
+This gradient part pushes away rare token embeddings from the feature vector of the non - rare targets in the current training sample .
+Based on the analysis , we propose a new method , adaptive gradient gating ( AGG ) .
+With a dynamic grouping of rare tokens at each training step , AGG solves the entire degeneration problem by gating a specific part of the gradient that is solely about rare tokens .
+Because AGG is optimized to target the main cause of the degeneration problem , rare token embeddings , it can prevent the over regularization problem about frequent token embeddings which occurs in other methods addressing the degeneration problem .
+The proposed method is evaluated in three tasks : language modeling , word similarity , and machine translation .
+The AGG outperforms the baseline and other existing methods in all tasks .
+In addition , it shows compatibility with other method that addresses the neural text degeneration problem .
+Via qualitative studies , we identify a correlation between our method and the frequency bias problem of learned embeddings ( Gong et al. , 2018 ; Ott et al. , 2018 ) .
+2 exp ( ht wTI(yt ) )
+Pθ ( yt |ht ) =
+PN , T l=1 exp ( ht wl ) ( 1 ) where w is the output token embedding which roles the weight of the output softmax layer , and I(yt ) represents the index of token yt .
+The negative log likelihood loss for an input and target pair ( x , y ) , LN LL is expressed as follows .
+LN LL = − T X log Pθ ( yt |ht ) .
+( 2 ) t=1 2.2 Embedding Problems in Neural Language Models
+Recent studies on the geometric properties of contextual embedding space have observed that the distribution of embedding vectors is far from isotropic and occupies a relatively narrow cone space(Mu and Viswanath , 2018 ; Liu et al. , 2019 ; Zhou et al. , 2019 ; Ethayarajh , 2019 ;) .
+Gao et al. ( 2019 ) named this phenomenon the representation degeneration problem .
+This degeneration problem results in an increase in the overall cosine similarity between token embeddings , making it difficult for the model to learn semantic relationships between tokens .
+Demeter et al. ( 2020 ) demonstrated that the norm information of the token embeddings is so dominant that angle information about the feature vector is ignored when calculating the logits in the output layer .
+Owing to this structural weakness of the embedding space , embeddings with small norms are always assigned with a low probability , which reduces the diversity of the text generated by the model .
+Anisotropy of the embedding space is a still problem for the pre - trained large language models , and language models with improved isotropic Background 2.1 Text Generation of Neural Language Models
+Neural language generative models process text generation tasks as conditional language modeling , in which the model is typically trained by minimizing the negative log likelihood of the training data .
+With a vocabulary of tokens V = { v1 , ... , vN } and embedding vectors { w1 , ... , wN } , where wi corresponds to token vi , at every training step , the model obtains a mini - batch input and target text corpus pair ( x , y ) , where xi , yi ∈ V , and y ∈ V T .
+The conditional probability for the target token yt , Pθ ( yt |ht ) , where ht is a context feature vector of the t - th position of the generated text conditioned 30  Methods MLE Freeze Freq 16.58 16.48 PPL ↓
+Med Rare 224.24 813.76 233.92 3017.53 Total 20.77 20.78
+Freq 0.426 0.840 I(W ) ↑
+Med Rare 0.286 0.198 0.651 0.831 Total 0.293 0.739 Table 1 : Perplexity and I(W ) for each token groups .
+Lower is better for PPL and higher is better for I(W ) .
+( a ) freeze until step 7k ( b ) freeze until step 18k ( c ) freeze until step 29k
+Figure 2 : Plot of I(W ) for rare and frequent groups and average cosine similarity between rare and frequent embeddings when freezing the training of rare tokens until specific training steps .
+embedding space performs well in downstream tasks(Biś et al. , 2021 ; Rajaee and Pilehvar , 2021 ) .
+Although the problem has been theoretically analyzed in several studies , existing methods are based on the observed phenomena as a result of the problem .
+To mitigate the phenomena observed from the problem , the post - processing of the embedding vectors(Mu and Viswanath , 2018 ; Biś et al. , 2021 ) or regularization terms about the phenomena(Gao et al. , 2019 ; Wang et al. , 2019 ; Wang et al. , 2020 ; Zhang et al. , 2020 ) were introduced .
+These methods are applied to all token embeddings , so there is the problem of over regularization for the embeddings whose semantic relationship is trained well .
+Also , methodologies based on the training dynamics of the token embeddings concerning the degeneration problem remain subject to study .
+Frequency bias in embedding space is another problem .
+Ott et al. ( 2018 ) conducted a comprehensive study on the under - estimation of rare tokens in neural machine translation .
+Gong et al. ( 2018 ) observed that embeddings in the language model were biased towards frequency and proposed an adversarial training scheme to address this problem .
+3 vocabulary tokens are divided into three groups : frequent , medium , and rare groups .
+Based on the appearance frequency in the training corpus , the 30 % , 50 % , and 20 % tokens are assigned to the frequent , medium , and rare group .
+We visualize the initial training dynamics of these groups via the projection of the embeddings into 2D , using singular value decomposition ( SVD ) projection .
+As illustrated in Figure 1 , rare groups degenerate first , as they emerge from the entire embedding distribution .
+Subsequently , other groups also start to degenerate , following the degeneration of the rare group .
+Based on this observation , we hypothesize that the degeneration of rare token embeddings induces the degeneration of non - rare token embeddings .
+3.2 Rare Tokens Degenerate Non - Rare Tokens Because Transformer ( Vaswani et al. , 2017 ) is representative of the current language models , we adopt the 6 - layer Transformer decoder model architecture for an empirical study on the training dynamics of embedding vectors .
+The model is trained in language modeling task using WikiText-103 dataset ( Merity et al. , 2018 ) .
+Experimental details regarding the model and training hyperparameter configurations can be found in the Appendix B. To verify the hypothesis of the previous subsection , we train a model while freezing the rare group token embeddings in their initial states during training , and compare it to the baseline model , where all embeddings are trained with negative log - likelihood loss .
+In addition , we train the models of various set Empirical Study : Token Embedding Training Dynamics led by Rare Tokens 3.1 Initial Training Dynamics of Embeddings To analyze the training procedure of token embeddings , we train a Transformer language model at the WikiText-103 dataset from scratch .
+Whole 31  Methods MLE Freeze ( b ) & ( c ) Freeze ( b ) Freeze ( c ) Freq 16.58 17.41 16.99 16.61 PPL ↓
+Med
+Rare 224.24 813.76 247.89 66.41 240.72 65.76 220.07 645.24 Total 20.77 21.79 21.26 20.76 I(W )
+↑
+Med Rare 0.286 0.198 0.693 0.551 0.561 0.678 0.276 0.15 Freq 0.426 0.323 0.495 0.443 Total 0.293 0.536 0.748 0.317 Table 2 : Perplexity and I(W ) for each token group at gradient partial freezing experiment .
+tings relative to freezing steps and examine whether the degeneration of rare token embeddings depends on when training of rare embeddings begins .
+The performance of the models is evaluated in two ways ; the likelihood and isotropy of token embeddings .
+Perplexity ( Bengio et al. , 2000 ) is adopted to evaluate the performance of the likelihood of the model .
+To measure the isotropy of the token embedding distribution , we adopt the partiP tion function Z(a ) = N exp ( wi aT ) defined in i=1
+Arora et al. ( 2016 ) , where wi denotes the embedding vector of token vi , and a represents a unit vector .
+Lemma 2.1 .
+in Arora et al. ( 2016 ) demonstrate that if the embedding vectors are isotropic , Z(a ) is approximately constant .
+Based on this property , we measure the isotropy of an embedding matrix W using I(W ) , which is defined as follows .
+mina∈X Z(a ) I(W )
+= , maxa∈X Z(a ) between the frequent and rare embeddings .
+From the analysis in this subsection , we demonstrate that the entire degeneration problem can be solved by solely handling just rare embeddings during the entire training procedure .
+3.3 Finding the Primary Cause of the Degeneration Problem : From the Gradient
+With T context feature vectors hi ( i ∈
+[ 1 , T ] ) from the training sample , the negative log - likelihood loss gradient for the rare token embedding wr is calculated as follows .
+X ∇wr LN LL = ( pr|i − 1)hi yi = vr | + ( 3 ) { z } pr|j hj + X { z | ( a ) X where I(W ) ∈
+[ 0 , 1 ] and X represents the set of eigenvectors of WT W ( Mu and Viswanath , 2018 ; Wang et al. , 2020 ; Biś et al. , 2021 ) .
+Furthermore , we measure the relatedness between the rare and frequent group token embeddings to verify that the degeneration of the frequent group follows the degeneration of the rare group .
+We calculate the average cosine similarity between the rare and frequent group embeddings to measure the relatedness .
+Table 1 shows the comparison of the baseline model and the model with frozen rare tokens .
+We denote the baseline as " MLE " and the freezing method as " Freeze " .
+Surprisingly , the PPL of frequent group tokens and overall I(W ) improved by simply not training the rare token embeddings .
+Figure 2 illustrates the change in I(W ) for the frequent and rare token embeddings , including the similarity between frequent and rare token embeddings at various freezing step settings .
+Whenever the rare token embeddings start to be trained , their I(W ) decreases steeply , followed by decreasing I(W ) of frequent embeddings and increasing similarities ( b ) ( 4 ) yk ∈Vr yj
+∈V / r | pr|k hk , } { z ( c ) } where yi denotes the target token for hi ,
+Vr is the rare token vocabulary group , and pr|i represents the conditional probability of token vr given hi , which is calculated as [ softmax(hi WT ) ]
+r .
+We divide the gradient for wr to 3 parts in Eq . 4 .
+Part ( a ) pulls wr close to the feature vectors whose target tokens are vr .
+Part ( b ) pushes away wr from the feature vectors whose target tokens are not rare .
+Part ( c ) pushes away wr from the feature vectors whose target tokens are rare .
+As an extension of the analysis in the previous subsection , we freeze these parts of the gradient with various settings during training to identify the key cause of the degeneration problem .
+In other words , depending on the settings , the specific gradient parts that will not be used for embedding training is detached from the computation graph during training stage .
+This can be easily implemented by detach ( ) function of Pytorch ( Paszke et al. , 2019 ) .
+All model and training configurations are the same as in the previous sections , except those to be frozen .
+32  Table 2 presents the results of the experiments in this subsection .
+We freeze the parts of the gradient for the rare tokens with three settings .
+Because part ( a ) is a key component required to train the token embedding to be aligned to the target , all settings activate part ( a ) .
+We notice that when part ( b ) is activated ( solely freezing part ( c ) ) , I(W ) decreases and PPL for rare tokens increases almost 10 times compared to when part ( b ) is frozen .
+Because activating part ( c ) is not seen to be negative for PPL and I(W ) , we conclude that part ( b ) of Eq . 4 is the bedrock cause for the degeneration problem .
+From the analysis in this section , we demonstrate that the degeneration problem could be solved to a large extent by mainly addressing the part of the gradient for rare embeddings that pushes away rare token embeddings from non - rare feature vectors .
+4 proportion of rare tokens in the entire vocabulary .
+In this study , we set K to the number of iteration steps during one epoch of training stage .
+4.2 Adaptive Gradient Gating for Rare Tokens After dynamically grouping the rare tokens at each training step , we need to handle a specific part of the gradient for the rare token embeddings to solve the degeneration problem of all embeddings .
+To solely control the gradient for rare token embeddings , we introduce a gradient gating method for a parameter x.
+We define x̃ as a tensor whose value is the same as x , but detached from the current training graph .
+This implies that x̃ is considered a constant , hence , gradient about x̃ does not exist .
+In practice , x̃ can be easily obtained from x using the detach ( ) function of Pytorch ( Paszke et al. , 2019 ) .
+With x̃ , we can gate the gradient for x as follows .
+Method 4.1 Dynamic Rare Token Grouping xgated =
+g ⊙ x
++ ( 1 − g ) ⊙ x̃
+To handle the specific part of the gradient for the rare token embeddings studied in the previous section , we need to properly group the rare tokens .
+A naive approach can be used to group rare tokens based on the appearance frequency of the training corpus , as described in the previous section .
+However , this static grouping method is suboptimal because the model is typically trained via mini - batch training .
+The group of rare tokens that appeared less frequently in recent batch samples is variable in the mini - batch training .
+Therefore , it is necessary to dynamically group rare tokens based on token appearances in recent batch samples .
+To consider the token appearances in recent batch samples , we introduce the token counter memory that remembers the number of the appearances of each token during the previous K training steps .
+For K memories , [ m1 , ... , mK ] , mt ∈ RN represents the number of appearances of each token of N -size vocabulary at the t - th previous training step .
+Memories are set as zero vectors at the initial stage .
+At each training step , the token appearance , a ∈ RN , is P calculated as the sum of all K memK ories : a = t=1 mt .
+Based on a , we determine whether token vi is in the rare token group Vr as follows .
+ai <
+α ⇒ vi ∈ V r K ( 5 ) ai ≥ α ⇒ vi
+∈ / Vr , K where ai is the i - th component of a , and α is a hyper - parameter in our method that controls the ∇x f ( xgated )
+=
+g ⊙ ∇x f ( x ) , ( 6 ) where xgated is a new parameter whose value is the same as x , and g ∈
+[ 0 , 1 ] is a gate tensor .
+When the xgated is fed to the function f ( · ) as input , the gradient for x is gated by g.
+As we described in section 3 , part ( b ) of Eq . 4 should mainly be handled to solve the degeneration problem .
+To address part ( b ) of Eq . 4 , given a context feature vector of the i - th position hi , we introduce a gate vector g1 ∈ RN as follows .
+( ak /K if vk ∈ Vr , vk ̸= yi g1k = ( 7 ) 1 else , where g1k denotes a k - th component of g1 .
+g1 controls the degree to which rare token embeddings move away from non - rare feature vectors whose targets differ from each rare token embedding .
+Also , each component of g1 is calculated based on the rarity of each rare token , ak , so gradient gating for part ( b ) of Eq . 4 is adaptive for each rare tokens .
+Although part ( c ) of Eq . 4 , which pushes embeddings away from the feature vectors whose targets are other rare tokens , is not to be seen as the cause of the degeneration problem in section 3 , this part also induces the degeneration problem for the certain situation when rare tokens degenerate other rare tokens .
+To address this , we approximate the multiple levels of rarity in the rare token group to two levels in this paper : ‘ less rare ’ and ‘ very rare ’ .
+33  Methods MLE AGG Human Freq 13.30 13.35 − PPL ↓ Med Rare
+146.47 438.67 146.44 75.39 − − Total 15.51 15.51 −
+Freq 9107 9105 10844 Uniq ↑
+Med Rare 3945 91 4287 345 7146 300 Total 13143 13737 18920
+I(W)↑ 0.377 0.813 − Table 3 : Experimental results for each token group in WikiText-103
+language modeling task comparing MLE baseline and AGG .
+Methods UL UL + AGG Human Freq 14.05 14.17 − PPL ↓ Med Rare 125.17 385.6 125.93 71.48 − − Total 16.17 16.25 −
+Freq 9527 9625 10844 Uniq ↑
+Med Rare 4402 97 4884 453 7146 300 Total 14026 14962 18920 I(W)↑ 0.396 0.654 − Table 4 : Experimental results for each token group in WikiText-103
+language modeling task comparing UL and UL+AGG .
+1 , 2 .
+Because our method solely handles the gradient for embeddings , we calculate z0i for a gradient about hi , which does not need to be gated .
+Finally , the negative log - likelihood loss for i - th position Li is computed as follows .
+We define the two rarity levels based on the average number of appearances of the entire rare tokens : if the token appearance ak is smaller than the mean of ar where r ∈ Vr , corresponding token is a very rare token .
+For the very rare token embeddings , part ( c ) of the gradient about embeddings pushes them away from the feature vectors whose targets are less rare tokens that are relatively frequent compared to them .
+This means that part ( c ) roles like part ( b ) in the above situation , which becomes the cause of the degeneration problem .
+Therefore , we need to handle part ( c ) of Eq . 4 for very rare tokens .
+To address part ( c ) of Eq . 4 for the very rare token embeddings , we introduce another gate vector g2 ∈ RN as follows .
+( min ( aākr , 1 ) if vk ∈ Vr , vk ̸= yi g2k = ( 8) 1 else , Li = − log p0I(yi ) |i
+− 1(yi ∈ / Vr ) log p1I(yi ) |i
+− 1(yi ∈
+Vr ) log p2I(yi )
+|i , m where pm I(yi )
+|i =
+[ softmax(zi ) ] I(yi ) with m=0 , 1 , 2 and 1 ( · ) denotes the Indicator function .
+Derivation of the gradient for rare token embeddings , ∇wr Li , is provided in Appendix A. 5 where g2k is the k - th component of g2 and ār is the mean of ar where
+r ∈ Vr . g2 controls the degree to which very rare token embeddings move away from less rare feature vectors whose targets differ from each very rare token embedding .
+Also , each component of g2 is calculated based on the rarity of each very rare token , ak , so gradient gating for part ( c ) of Eq . 4 is adaptive for each very rare tokens .
+To calculate the loss of hi , we calculate three logits , z0i , z1i , and z2i , as follows .
+T zli = gl ⊙ h̃i
+WT + ( 1 − gl ) ⊙ h̃i W̃ , Experiments
+We evaluate our method on various tasks including language modeling , word similarity , and machine translation .
+In the language modeling task , we focus on verifying the diversity of the generated texts .
+We test the learning of the semantic relationships between tokens on the word similarity task .
+Finally , we evaluate the quality of generated texts on the machine translation task .
+For all the experimental results below , we adopt the state - of - the - art model architecture as a baseline to properly demonstrate the effectiveness of our method .
+Every detail on the experiment , such as model hyper - parameters and training configurations , regard the reproducibility are provided in Appendix B. T z0i = hi W̃ ( 10 ) ( 9 ) where W denotes an embedding matrix , and l = 34  Method Prefix MLE AGG Texts No . 20 Squadron is a Royal Australian Air Force ( RAAF ) support squadron .
+Coming under the control of No . 96 Wing , it is responsible for the management of the airfield at RAAF Base Woomera , South Australia .
+The squadron is responsible for air defence , air defence , and air defence , as well as air defence , aerial reconnaissance , and air defence .
+It is also responsible for air defence , air defence , and air defence , as well as air defence , aerial reconnaissance , and air defence .
+was established in October 1943 at Townsville , Queensland , under the command of Group Captain Paddy Heffernan .
+It was initially based at Townsville , Queensland , under the control of No . 9 Operational Group , which controlled all air bases in New South Wales .
+It was renamed No . 1 Mobile Fighter Sector in April 1944 .
+Uniq ↑ 15 48 Table 5 : Generated texts on the Wikitext-103 test set and uniq tokens for each texts .
+50 BPE tokens are given as prefix and the models are to generate the continuation of 100 next BPE tokens .
+5.1 Language Modeling predictions surpasses the human distribution .
+The I(W ) for all token embeddings increased over 2 times the baseline .
+Experimental results of I(W ) for the embeddings of each frequency groups can be found in Appendix C. Table 5 shows examples of generated texts from MLE baseline and AGG .
+We also show additional examples of generated texts in Appendix F. Compatibility Neural text degeneration problem is another problem in neural text generative models , where the model generates texts that are less likely to match human word distributions .
+Existing methods for this problem focus on the diversity of the generated texts by adding an auxiliary loss to the original negative log - likelihood loss ( Welleck et al. , 2020 ) .
+Although Welleck et al. ( 2020 ) and AGG attempts to address the same problem about diversity , AGG can be compatible with the existing method in the text degeneration problem because AGG does not alter the form of the loss function in MLE training .
+Table 4 presents the results of the experiments about fusion of unlikelihood training(Welleck et al. , 2020 ) and AGG .
+We denote the unlikelihood training as UL .
+From Table 4 , we notice that when UL and AGG are fused , it produces a synergistic effect that exceeds the gain of each for the baseline .
+This indicates that AGG is compatible with methods that address other problems in text generation .
+Setting We conduct experiments using WikiText103 dataset , which is a significantly large dataset for language modeling task with approximately 103 M words and 260 K vocabulary size ( Merity et al. , 2018 ) .
+Texts in the dataset are preprocessed based on the byte - pair encoding(Sennrich et al. , 2016 ) .
+We adopt the GPT-2 medium architecture(Radford et al. , 2019 ) , which comprises 24 Transformer decoder layers as a baseline model .
+Because our method is about learning token embeddings , we train the models from scratch for a maximum of 50k iterations and evaluate them based on the perplexity of the validation set .
+For hyper - parameter searching , we select α ∈ { 0.01 , 0.02 , 0.03 , 0.04 , 0.05 } for AGG method on the language modeling task .
+The hyper - parameter sensitivity for the AGG are given in Appendix D. We use three quantitative metrics to evaluate our method : Perplexity , Uniq , and I(W ) .
+Related to the likelihood of generated texts , Perplexity quantifies the prediction difficulty over the next token .
+Uniq ( Welleck et al. , 2020 ) quantify the number of unique next - token predictions , measuring the token diversity .
+As described in section 3 , I(W ) measures the isotropy of the token embedding space .
+Results We present our results for the testset in Table 3 .
+We denote the baseline method as ‘ MLE ’ and our method as ‘ AGG ’ .
+We measure Perplexity and Uniq for each token group defined in Section 3 .
+As presented in Table 3 , AGG improves the overall metrics for the medium and rare groups while maintaining performance for the frequent token group .
+This shows that our method not only improves the quality of rare token embeddings , but also the quality of non - rare token embeddings .
+In particular , for the rare group , the Perplexity score decrease significantly and the number of unique 5.2 Word Similarity
+Setting We evaluate the semantic relationship between tokens for AGG and the baseline with four word similarity datasets : MEN , WS353 , RG65 , and RW(Bruni et al. , 2014 ; Agirre et al. , 2009 ; Rubenstein and Goodenough , 1965 ; Luong et al. , 2013 ) .
+Methods are tested whether the similarity between the given two words in the embedding space is consistent with the ground truth , in terms of Spear35  Datasets MEN WS353 RG65 RW MLE 33.57 47.51 35.48 32.13 AGG 55.13 56.54 65.45 36.36 Method MLE AGG no g1
+no g2 Table 6 : Performance(Spearman ’s γ × 100 ) of the models on the four word similarity datasets .
+Methods Transformer ( Vaswani et al. , 2017 ) CosReg ( Gao et al. , 2019 )
+Adv MLE ( Wang et al. , 2019 ) SC ( Wang et al. , 2020 ) AGG PPL↓ 15.51 15.51 15.48 15.51 Uniq↑ 13143 13737 13018 13682 I(W)↑ 0.377 0.813 0.367 0.701 Table 8 : Ablation study on gating vector of AGG .
+Method MLE AGG static AGG BLEU ↑
+Base Big 27.30 28.40 28.38 28.94 28.43 29.52 28.45 29.32 28.70 29.81 PPL↓ 15.51 15.51 15.55 Uniq↑ 13143 13737 13614 I(W)↑ 0.377 0.813 0.752 Table 9 : Ablation study about dynamic grouping of AGG .
+Table 7 : Comparison of different methods in terms of BLEU scores .
+man ’s rank correlation .
+We adopt cosine distance to compute the similarity between embeddings .
+We use the same models trained on language modeling tasks with the WikiText-103 dataset for the word similarity task .
+Results Table 6 presents the result obtained from the evaluation of the word similarity task .
+From this table , it can be observed that our method outperforms the baseline on overall datasets .
+Although AGG handles only training of rare tokens , the semantic relationships between all tokens are also well learned .
+Qualitative studies on semantic alignment between tokens are provided in Appendix E. tion , our method is better than all other previous works in handling the representation degeneration problem that reported BLEU scores in the same tasks .
+These results demonstrate the effectiveness of AGG in the quality of the generated texts .
+While other methods addressing the degeneration problem targets all token embeddings , target of AGG , rare token embeddings , are optimized based on the analysis about the training dynamics of token embeddings .
+Due to this difference , our method can prevent the over regularization problem for frequent token embeddings , which is the main advantage of AGG compared to other works .
+Qualitative study about cross - lingual semantic alignment between tokens of the source and target languages is provided in Appendix E. 5.3 Machine Translation 6 Analysis of AGG 6.1 Ablation Study
+Setting We utilize a dataset from standard WMT 2014 containing 4.5 M English→German sentence pairs .
+The source and target sentences are encoded by 37 K shared tokens based on byte - pair encoding(Sennrich et al. , 2016 ) .
+We adopt the two version of Transformer(Vaswani et al. , 2017 ) as the baseline model for applying our method : base and big .
+The model configuration is the same as that proposed in Vaswani et al. ( 2017 ) .
+To evaluate the quality of the generated texts , we measure BLEU score ( Papineni et al. , 2002 ) , which is standard metric for machine translation task .
+Results Table 7 presents a comparison of our method and other methods in terms of the BLEU score .
+Our method achieves 1.4 and 1.41 BLEU score improvements on the machine translation task for the base and big baseline models .
+In addi In our method , AGG , we introduce two gate vectors , g1 , and g2 , to handle the gradient for rare and very rare token embeddings .
+We conduct experiments on these gate vectors .
+Table 8 presents the results of the ablation studies compared with the MLE and AGG .
+When g1 is excluded from AGG ( denoted as ‘ no g1 ’ ) , Uniq and I(W ) decreased significantly , because g1 is the key component for the gradient gating .
+When g2 is excluded from AGG ( denoted as ‘ no g2 ’ ) , Uniq and I(W ) slightly decrease .
+Accordingly , we notice that g2 is important for the gating of gradients fort the very rare token embeddings .
+Also , we present the analysis about rare token grouping method of AGG .
+Figure 4 presents the 36  ( a ) MLE ( b ) AGG ( c ) Singular value decay Figure 3 : ( a ) , ( b ) Token embedding visualization for the baseline model and AGG on the language modeling task with WikiText-103 .
+Red , green , and blue points represent rare , medium , and frequent groups respecively ; ( c ) Normalized singular value for MLE and AGG .
+the frequent group are disjoint , which is refered as the frequency bias problem of embeddings ( Gong et al. , 2018 ) .
+From the analysis of the visualization of the embedding space , we notice that the manipulating the training of the rare token embeddings can alleviate the frequency bias problem .
+Figure 3 ( c ) presents the plot of the normalized singular value of embedding matrix for MLE and AGG .
+Slowly decaying singular values of AGG demonstrate an isotropic distribution of the embedding space .
+7 Figure 4 : Size of the rare token group during initial 1k steps of training with WikiText-103 dataset .
+Conclusion In this study , we analyzed the training dynamics of the token embeddings concerning the representation degeneration problem of the learned embeddings , focusing on the rare tokens .
+Based on the analysis , we propose an adaptive gradient gating method that solves the problem by solely handling the training for rare token embeddings .
+Experiments and qualitative studies in various tasks of text generation demonstrate the effectiveness of our method .
+Beyond the two - level approximation of rarity of rare tokens which is applied to our study , addressing multiple levels of rarity can be an interesting region to study for the future work .
+size of the rare token group during initial 1k training steps when the model is trained with WikiText103 dataset .
+As presented in the figure , rare group size fluctuate wildly at the initial training stage .
+We expect for this grouping method to determine an optimal rare token group for the current training step .
+Table 9 presents the results of ablation study about dynamic grouping .
+To except dynamic grouping from AGG , we fixed the rare token group after 1 epoch .
+For this static grouping AGG method , Next - token diversity(Uniq ) and the isotropy of the token embedding space(I(W ) ) perform worse than dynamic grouping AGG .
+Acknowledgements
+This work was supported by Institute of Information & communications Technology Planning & Evaluation ( IITP ) grant funded by the Korea government(MSIT )
+[ NO.2021 - 0 - 01343 , Artificial Intelligence Graduate School Program ( Seoul National University ) ] , the BK21 FOUR program of the Education and Research Program for Future ICT Pioneers , Seoul National University in 2022 , AIRS Company in Hyundai Motor Company & Kia 6.2 Visualization Figure 3 ( a ) and ( b ) present the visualizations of the embedding space of baseline MLE and our method .
+In the figure , applying the AGG method restores the isotropy of the token embedding space .
+In addition , we observe that the regions occupied by each token group are not disjoint when applying AGG .
+For baseline , the regions occupied by rare group and 37  Corporation through HMC / KIA - SNU AI Consortium Fund , and SNU - Naver Hyperscale AI Center .
+Jun Gao , Di He , Xu Tan , Tao Qin , Liwei Wang , and TieYan Liu .
+2019 .
+Representation degeneration problem in training natural language generation models .
+In 7th International Conference on Learning Representations , ICLR 2019 , New Orleans , LA , USA , May 6 - 9 , 2019 .
+OpenReview.net .
+References Eneko Agirre , Enrique Alfonseca , Keith Hall , Jana Kravalova , Marius Paşca , and Aitor Soroa . 2009 .
+A study on similarity and relatedness using distributional and WordNet - based approaches .
+In Proceedings of Human Language Technologies : The 2009 Annual Conference of the North American Chapter of the Association for Computational Linguistics , pages 19–27 , Boulder , Colorado .
+Association for Computational Linguistics .
+Jonas Gehring , Michael Auli , David Grangier , Denis Yarats , and Yann N. Dauphin . 2017 .
+Convolutional sequence to sequence learning .
+In Proceedings of the 34th International Conference on Machine Learning , ICML 2017 , Sydney , NSW , Australia , 6 - 11 August 2017 , volume 70 of Proceedings of Machine Learning Research , pages 1243–1252 .
+PMLR .
+Sanjeev Arora , Yuanzhi Li , Yingyu Liang , Tengyu Ma , and Andrej Risteski .
+2016 .
+A latent variable model approach to PMI - based word embeddings .
+Transactions of the Association for Computational Linguistics , 4:385–399 .
+ChengYue
+Gong , Di He , Xu Tan , Tao Qin , Liwei Wang , and Tie - Yan Liu .
+2018 .
+FRAGE : frequencyagnostic word representation .
+In Advances in Neural Information Processing Systems 31 : Annual Conference on Neural Information Processing Systems 2018 , NeurIPS 2018 , December 3 - 8 , 2018 , Montréal , Canada , pages 1341–1352 .
+Dzmitry Bahdanau , Kyunghyun Cho , and Yoshua Bengio .
+2015 .
+Neural machine translation by jointly learning to align and translate .
+In 3rd International Conference on Learning Representations , ICLR 2015 , San Diego , CA , USA , May 7 - 9 , 2015 , Conference Track Proceedings .
+A. Graves . 2013 .
+Generating sequences with recurrent neural networks .
+ArXiv , abs/1308.0850 .
+Tianlin Liu , Lyle Ungar , and João Sedoc .
+2019 .
+Unsupervised post - processing of word vectors via conceptor negation .
+In The Thirty - Third AAAI Conference on Artificial Intelligence , AAAI 2019 , The ThirtyFirst Innovative Applications of Artificial Intelligence Conference , IAAI 2019 , The Ninth AAAI Symposium on Educational Advances in Artificial Intelligence , EAAI 2019 , Honolulu , Hawaii , USA , January 27 February 1 , 2019 , pages 6778–6785 .
+AAAI Press .
+Yoshua Bengio , Réjean Ducharme , and Pascal Vincent . 2000 .
+A neural probabilistic language model .
+In Advances in Neural Information Processing Systems 13 , Papers from Neural Information Processing Systems ( NIPS ) 2000 , Denver , CO , USA , pages 932–938 .
+MIT Press .
+Daniel Biś , Maksim Podkorytov , and Xiuwen Liu . 2021 .
+Too much in common : Shifting of embeddings in transformer language models and its implications .
+In Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies , pages 5117–5130 , Online .
+Association for Computational Linguistics .
+Thang Luong , Richard Socher , and Christopher Manning .
+2013 .
+Better word representations with recursive neural networks for morphology .
+In Proceedings of the Seventeenth Conference on Computational Natural Language Learning , pages 104–113 , Sofia , Bulgaria .
+Association for Computational Linguistics .
+Stephen Merity , Nitish Shirish Keskar , and Richard Socher .
+2018 .
+Regularizing and optimizing LSTM language models .
+In 6th International Conference on Learning Representations , ICLR 2018 , Vancouver , BC , Canada , April 30 - May 3 , 2018 , Conference Track Proceedings .
+OpenReview.net .
+Elia Bruni , Nam Khanh Tran , and Marco Baroni . 2014 .
+Multimodal distributional semantics .
+Journal of Artificial Intelligence Research .
+David Demeter , Gregory Kimmel , and Doug Downey . 2020 .
+Stolen probability : A structural weakness of neural language models .
+In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics , pages 2191–2197 , Online .
+Association for Computational Linguistics .
+Stephen Merity , Caiming Xiong , James Bradbury , and Richard Socher .
+2017 .
+Pointer sentinel mixture models .
+In 5th International Conference on Learning Representations , ICLR 2017 , Toulon , France , April 24 - 26 , 2017 , Conference Track Proceedings .
+OpenReview.net .
+Kawin Ethayarajh . 2019 .
+How contextual are contextualized word representations ?
+Comparing the geometry of BERT , ELMo , and GPT-2 embeddings .
+In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing ( EMNLP - IJCNLP ) , pages 55–65 , Hong Kong , China .
+Association for Computational Linguistics .
+Jiaqi Mu and Pramod Viswanath . 2018 .
+All - but - thetop : Simple and effective postprocessing for word representations .
+In 6th International Conference on Learning Representations , ICLR 2018 , Vancouver , BC , Canada , April 30 - May 3 , 2018 , Conference Track Proceedings .
+OpenReview.net . 38  Myle Ott , Michael Auli , David Grangier , and Marc’Aurelio Ranzato . 2018 .
+Analyzing uncertainty in neural machine translation .
+In Proceedings of the 35th International Conference on Machine Learning , ICML 2018 , Stockholmsmässan , Stockholm , Sweden , July 10 - 15 , 2018 , volume 80 of Proceedings of Machine Learning Research , pages 3953–3962 .
+PMLR .
+you need .
+In Advances in Neural Information Processing Systems 30 : Annual Conference on Neural Information Processing Systems 2017 , December 4 - 9 , 2017 , Long Beach , CA , USA , pages 5998–6008 .
+Dilin Wang , Chengyue Gong , and Qiang Liu .
+2019 .
+Improving neural language modeling via adversarial training .
+In Proceedings of the 36th International Conference on Machine Learning , volume 97 of Proceedings of Machine Learning Research , pages 6555 – 6565 .
+PMLR .
+Kishore Papineni , Salim Roukos , Todd Ward , and WeiJing Zhu . 2002 .
+Bleu : a method for automatic evaluation of machine translation .
+In Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics , pages 311–318 , Philadelphia , Pennsylvania , USA .
+Association for Computational Linguistics .
+Lingxiao Wang , Jing Huang , Kevin Huang , Ziniu Hu , Guangtao Wang , and Quanquan Gu . 2020 .
+Improving neural language generation with spectrum control .
+In 8th International Conference on Learning Representations , ICLR 2020 , Addis Ababa , Ethiopia , April 26 - 30 , 2020 .
+OpenReview.net .
+Adam Paszke , Sam Gross , Francisco Massa , Adam Lerer , James Bradbury , Gregory Chanan , Trevor Killeen , Zeming Lin , Natalia Gimelshein , Luca Antiga , Alban Desmaison , Andreas Köpf , Edward Yang , Zachary DeVito , Martin Raison , Alykhan Tejani , Sasank Chilamkurthy , Benoit Steiner , Lu Fang , Junjie Bai , and Soumith Chintala . 2019 .
+Pytorch : An imperative style , high - performance deep learning library .
+In Advances in Neural Information Processing Systems 32 : Annual Conference on Neural Information Processing Systems 2019 , NeurIPS 2019 , December 8 - 14 , 2019 , Vancouver , BC , Canada , pages 8024–8035 .
+Sean Welleck , Ilia Kulikov , Stephen Roller , Emily Dinan , Kyunghyun Cho , and Jason Weston . 2020 .
+Neural text generation with unlikelihood training .
+In 8th International Conference on Learning Representations , ICLR 2020 , Addis Ababa , Ethiopia , April 26 - 30 , 2020 .
+OpenReview.net .
+Zhilin Yang , Zihang Dai , Ruslan Salakhutdinov , and William W. Cohen . 2018 .
+Breaking the softmax bottleneck : A high - rank RNN language model .
+In 6th International Conference on Learning Representations , ICLR 2018 , Vancouver , BC , Canada , April 30 May 3 , 2018 , Conference Track Proceedings .
+OpenReview.net .
+Ofir Press and Lior Wolf . 2017 .
+Using the output embedding to improve language models .
+In Proceedings of the 15th Conference of the European Chapter of the Association for Computational Linguistics : Volume 2 , Short Papers , pages 157–163 , Valencia , Spain .
+Association for Computational Linguistics .
+Zhong Zhang , Chongming Gao , Cong Xu , Rui Miao , Qinli Yang , and Junming Shao . 2020 .
+Revisiting representation degeneration problem in language modeling .
+In Findings of the Association for Computational Linguistics : EMNLP 2020 , pages 518–527 , Online .
+Association for Computational Linguistics .
+Alec Radford , Jeff Wu , Rewon Child , David Luan , Dario Amodei , and Ilya Sutskever . 2019 .
+Language models are unsupervised multitask learners .
+Tianyuan Zhou , João Sedoc , and Jordan Rodu . 2019 .
+Getting in shape : Word embedding subspaces .
+In Proceedings of the Twenty - Eighth International Joint Conference on Artificial Intelligence , IJCAI 2019 , Macao , China , August 10 - 16 , 2019 , pages 5478 – 5484 .
+ijcai.org .
+Sara Rajaee and Mohammad Taher Pilehvar . 2021 .
+A cluster - based approach for improving isotropy in contextual embedding space .
+In Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing ( Volume 2 : Short Papers ) , pages 575–584 , Online .
+Association for Computational Linguistics .
+Herbert Rubenstein and John Goodenough .
+1965 .
+Contextual correlates of synonymy .
+Commun .
+ACM , 8:627–633 .
+Rico Sennrich , Barry Haddow , and Alexandra Birch . 2016 .
+Neural machine translation of rare words with subword units .
+In Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics ( Volume 1 : Long Papers ) , pages 1715–1725 , Berlin , Germany .
+Association for Computational Linguistics .
+Ashish Vaswani , Noam Shazeer , Niki Parmar , Jakob Uszkoreit , Llion Jones , Aidan N. Gomez , Lukasz Kaiser , and Illia Polosukhin .
+2017 .
+Attention is all 39  A As p1I(yi ) |i =
+[ softmax(z1i ) ]
+I(yi ) |i , Derivation of the gradient of AGG loss w.r.t .
+rare token embedding ∇(z 1 ) r p1I(yi )
+|i
+= −p1I(yi ) |i
+p1r|i .
+i
+We follow the same notation as in the main paper .
+Before we write the derivation of the gradient about rare token embedding wr , we write the gradient of f ( w̃j ) and ( zil ) j about wr , where f ( w̃j ) is the function of w̃j with j = 1 , ... , N and ( zil ) j is a j - th component of zli with l = 0 , 1 , 2 as follows .
+is computed as follows .
+Thus , ∇wr LAGG i ∇wr LAGG i 1 = − 1 · ∇wr ( zi1 ) r ∇ 1 p1 pI(yi ) |i
+( zi ) r I(yi )
+|i
+( By Eq . 14 . )
+∇wr f ( w̃j ) =
+∇w̃j f ( w̃j ) ⊙ ∇wr w̃j
+= ∇w̃j f ( w̃j ) ⊙ 0
+= 0
+for all j ( 11 ) ( By Eq . 12 . )
+Considering the case of yi ∈
+Vr but yi ̸= vr , LAGG is written as follows .
+i ∇wr ( zil ) j = ∇wr [ glj · h̃i wTj + ( 1 − glj · h̃i w˜Tj ) ]
+LAGG = − log p0I(yi ) |i
+− log p2I(yi )
+|i
+i = glj ∇wr h̃i wTj + 0 ( glj h̃i if j = r = 0 else ( glj
+hi if j = r = 0 else ( 17 ) Then ∇wr LAGG is written as follows .
+i ∇wr LAGG i = −∇wr log p0I(yi ) |i
+− ∇wr log p2I(yi )
+|i
+= −∇wr log p2I(yi )
+|i − 0
+( ∵ hi = h̃i in terms of value . )
+( ∵ log p0I(yi ) |i is a function of w̃r . )
+1 = − 2 ∇wr p2I(yi ) |i pI(yi ) |i
+( 12 ) Considering the case of yi ∈ / Vr , AGG negative log - likelihood loss for the i - th position of token generation , LAGG is written as follows .
+i N 1 X = − 2 · ∇wr ( zi2 ) j ∇ 2 p2 pI(yi ) |i
+j=1 ( zi ) j I(yi ) |i
+( 13 ) ( ∵ p2I(yi ) |i is a function of ( zi2 ) j , j = 1 , ... , N . )
+1 = − 2 ∇ 2 p2 · ∇wr ( zi2 ) r pI(yi ) |i
+( zi ) r I(yi ) |i
+Then gradient of LAGG about wr is written as i follows .
+∇wr LAGG i ( ∵ Eq . 12 . )
+= −∇wr log p0I(yi ) |i
+− ∇wr log p1I(yi )
+|i ( 18 ) As p2I(yi )
+|i
+=
+[ softmax(z2i ) ] I(yi ) |i , = −∇wr log p1I(yi ) |i
+− 0 ( ∵ log p0I(yi ) |i
+is a function of w̃r . )
+1 = − 1 ∇wr p1I(yi ) |i pI(yi ) |i
+1 ( 16 ) = p1r|i · ∇wr ( zi1 ) r = g1r p1r|i hi ( ∵ w̃j is treated as a constant . )
+LAGG = − log p0I(yi ) |i
+− log p1I(yi )
+|i
+i ( 15 ) N X = − 1 pI(yi ) |i
+j=1 ∇(z 2 ) r p2I(yi ) |i
+= −p2I(yi ) |i
+p2r|i .
+i ( 19 )
+Thus , ∇wr LAGG is computed as follows .
+i ∇wr LAGG i 1 ∇ 2 p2 · ∇wr ( zi2 ) r = − 2 pI(yi ) |i
+( zi ) r I(yi ) |i
+∇(z 1 ) j p1I(yi ) |i · ∇wr ( zi1 ) j
+i ( ∵ p1I(yi ) |i is a function of ( zi1 ) j , j = 1 , ... , N . )
+1 ∇ 1
+p1 · ∇wr ( zi1 ) r = − 1 pI(yi ) |i
+( zi ) r I(yi )
+|i
+( By Eq . 18 . )
+= p2r|i · ∇wr ( zi2 ) r = g2r p2r|i
+hi ( By Eq . 12 . )
+( 14 ) ( By Eq . 12 . )
+40 ( 20 ) 
+Considering the remained case of yi = vr , since yi ∈
+Vr , LAGG is same as the second case , and i derivation process of ∇wr LAGG shares the same
+i process with Eq . 18 .
+As I(yi ) = r , ∇(z 2 ) r p2I(yi ) |i
+= p2I(yi ) |i
+( 1 − p2I(yi ) |i )
+i Methods MLE AGG ( 21 ) ∇wr LAGG i 1 · ∇wr ( zi2 ) r ∇ 2 p2 = − 2 pI(yi ) |i
+( zi ) r I(yi ) |i
+Methods UL UL + AGG ( By Eq . 21 . )
+( 22 ) ( By Eq . 12 . )
+= ( p2r|i − 1)hi D ( ∵ I(yi ) =
+r and g2r = 1 if I(yi ) =
+r. ) I(W)↑ Med Rare 0.351 0.293 0.626 0.696
+Hyperparameter Sensitivity
+In this sections we show how the metrics used on language modeling task change with the hyperparameter α in Figure 5 .
+We observed an interesting phenomenon about the non - rare token group when rare token group size increases over a specific threshold .
+For the rare token group , Uniq and I(W ) metrics have a positive correlation .
+They increase together up to a certain alpha value and decrease together as alpha increases over that value .
+However , for the non - rare token group , Uniq increases as alpha increases over that certain value while there are negative effects where I(W ) decreases and Ppl increases .
+Because non - rare tokens are a major group , Figure 5 ( b ) and ( c ) present the above phenomenon about the non - rare token group although they present metrics for overall tokens .
+We consider this phenomenon to be another degeneration problem , as the increase of Uniq with negative impacts on isotropy and likelihood does not imply improvement of text quality , implying just generation of unproper tokens .
+This problem which occurs when rare token group size increases over a certain threshold can be handled in future work .
+As pr|i = pm r|i with m = 0 , 1 , 2 in terms of value , we finally write ∇wr LAGG as follows .
+i   (pr|i − 1)hi if yi = vr ∇wr Li = g1r pr|i hi ( 23 ) if yi ∈ /
+Vr   g2r pr|i
+hi else , Experimental Details
+In this section , we present the details of the experiments in main page .
+All the experiments were conducted with a single GPU on our machine ( GPU : NVIDIA A40 ) and from single run .
+For each task in the experiments , we use the same model architecture and train it with different objectives(i.e . , MLE , AGG , UL ) .
+The hyper - parameters used for different training methods in the same task are exactly same .
+The detailed hyper - parameters are described in Table 12 .
+C Freq 0.533 0.731 Table 11 : Experimental results about I(W ) for each token group in WikiText-103
+language modeling task comparing UL baseline and UL + AGG .
+= −g2r ( 1 − p2I(yi )
+|i )
+hi B I(W)↑ Med Rare 0.33 0.278 0.714 0.813 Table 10 : Experimental results about I(W ) for each token group in WikiText-103
+language modeling task comparing MLE baseline and AGG .
+Thus , ∇wr LAGG is computed as follows .
+i =
+−(1 − p2I(yi ) |i ) · ∇wr ( zi2 ) r
+Freq 0.51 0.702 Experimental Results of I(W ) for each frequency groups
+In this section , we present the experimental results about I(W ) for the embeddings of each frequency groups .
+Table 10 shows the I(W ) comparing MLE baseline and AGG .
+Table 11 shows the I(W ) comparing UL baseline and the fusion of UL and AGG .
+As presented in Table 10 and 11 , AGG improves isotropy of the embedding space for all frequency groups , indicating that our method solves the whole degeneration problem .
+E Qualitative Study about Semantic Alignments between Tokens In this section , we present qualitative studies about semantic alignments between tokens for language modeling and machine translation tasks .
+We select three rare token from each datasets : " homepage " , " Werewolf " , and " policymakers " for WikiText-103 41  dataset , and " optimum " , " criminal " , and " happiness " for WMT14 En→De dataset .
+For each rare token , we extract the top-5 nearest neighbor token predicted by the cosine distance between token embeddings .
+Compared with baseline MLE method , AGG shows significant improvement to train semantic alignments for rare tokens .
+From Table 13 , we notice that the rare tokens trained with AGG are semantically well aligned and not biased about token frequency .
+Table 14 demonstrates that token embeddings trained with AGG also learn the cross - lingual semantic alignments between target language tokens .
+F Examples
+We present additional generated text samples from the model trained on language modeling task in Table 15 .
+From the table , we notice that the model trained with AGG generates more diverse and high quality text than the baseline .
+42  Hyperparameter # of layers Hidden dimension Projection dimension # of heads Dropout Vocabulary size # of parameters Learning rate Max tokens per batch Maximum training steps Warmup steps
+Optimizer Weight decay α for AGG α for UL Empirical Study Language Modeling 6 512 2048 8 0.1 44256 42 M 7 · 10−4 32k 40k
+4k Adam 0.01 − − 24 1024 4096 16 0.1 44256 358 M 7 · 10−4 32k 50k
+4k Adam 0.01 0.03 1.0 Machine Translation Base Big 6 - 6 6 - 6 512 1024 2048 4096 8 16 0.1 0.3 40624 40624 65 M 218 M −3 1 · 10 1 · 10−3 64k 64k 190k 190k 4k 4k Adam Adam 0.01 0.01 0.08 0.08 − − Table 12 : Model configurations and training hyper - parameters for all experiments conducted in the main page .
+For word similarity task , the model trained on language modeling task are evaluated for word similarity datasets .
+( a ) Perplexity ( b ) Uniq ( c ) I(W ) Figure 5 : Hyper - parameter(α ) sensitivity of AGG in the language modeling task on Wikitext-103 dataset .
+43  homepage MLE AGG BOX website inbox webpage livestream blog namespace Tumblr hashes websites Werewolf MLE AGG ASUS Creature riet Nightmare 480 Bride nuclear Sneak ATCH Sniper policymakers MLE AGG Steam politicians death environmentalists Venezuel activists includ planners reason economists Table 13 : Top-5 nearest neighbors of each rare tokens in WikiText-103 dataset .
+Performance of AGG method is compared with the baseline MLE method .
+Red color denotes the rare tokens among neighbors .
+optimum MLE AGG therto optimal ratory optimale∗ consultan@@ optimalen∗ sofar maximum protection@@ Optim@@ criminal MLE AGG Criminal criminals criminals Criminal perpetr@@ krimi@@∗ secution kriminellen∗ xious crime happiness MLE AGG juries happy enness joy ocopying happ@@ ratory Glück∗ sacri@@ pleasure Table 14 : Top-5 nearest neighbors of each rare source tokens in WMT14 En→De dataset .
+Performance of AGG method is compared with the baseline MLE method .
+The symbol @@ stands for sub - word tokenization of the dataset .
+The symbol * denotes the synonym token of the target language .
+44  Method Prefix MLE AGG Method Prefix MLE AGG Method Prefix MLE AGG Method Prefix MLE AGG Texts A Company , 2nd Engineer Combat Battalion , moved to the south side of the Yongsan - Naktong River road ; D Company of the 2nd Engineer Battalion was on the north side of the road .
+Approximately 2 miles ( 3 . 2 km ) north of the river , the 2nd Engineer Combat Battalion was on the south side of the road .
+The 2nd Engineer Combat Battalion was on the south side of the road . .
+2 km ) north of the river , the 2nd Engineer Combat Battalion was attacked by a small force of North Korean People ’s Volunteer Army ( NK ) troops .
+The North Koreans were able to penetrate the UN lines and capture the town .
+Uniq ↑ Texts The twelve 45 - calibre 35 .
+6 cm ( 14 . 0
+in )
+Type 41 guns of the Ise class were mounted in three pairs of twin - gun , superfiring turrets .
+Numbered one through two , the turrets were placed in superfiring pairs , one ahead of the other .
+The turrets were placed in superfiring pairs , with the turrets superfiring over the wing turrets .
+The turrets were placed in superfiring pairs , with the turrets superfiring over the wing turrets .
+The turrets were placed in superfiring pairs , with the turrets superfiring over the wing turrets .
+The turrets were placed in superfiring pairs , with the turrets superfiring over the wing turrets .
+The turrets were placed in superfiring five from front to rear , the guns had a firing arc of 260 ° .
+They fired a 45 .
+3 kg ( 99 lb ) projectile at a muzzle velocity of 835 m / s ( 2 , 740 ft / s ) to a range of 16 , 000 m ( 52 , 000 yd ) .
+They had a maximum elevation of 30 degrees and fired a 36 .
+3 kg ( 77 lb ) projectile at a muzzle velocity of 835 Uniq ↑ Texts Despite the expensive reconstructions , both vessels were considered obsolete by the eve of the Pacific War , and neither saw significant action in the early years of the war .
+Following the loss of most of the IJN ’s large aircraft carriers during the Battle of Midway , the IJN was forced to rely on the United States Navy for aircraft carriers and aircraft carriers to support operations in the Pacific .
+The IJN ’s aircraft carriers were the first to be equipped with the new Mark 4 torpedo and the IJN ’s aircraft carriers were the first to be equipped with the Mark 4 torpedo .
+The IJN ’s aircraft carriers were the first to be equipped with the Mark 4 torpedo , and the IJN ’s aircraft carriers of Midway , the IJN decided to modernize its fleet and modernize its fleet .
+The IJN ’s new ships were designed to be capable of operating at speeds of up to 30 knots ( 56 km / h ; 35 mph ) , and were fitted with a new bow section .
+The ships were designed to carry 1 , 000 t ( 980 long tons ; 1 , 100 short tons ) of fuel oil , and were fitted with a pair of aircraft catap Uniq ↑ Texts Amos was born in Macclesfield , Cheshire and was a member of the Crewe Alexandra academy until he was released at the age of 10 .
+While at Crewe , he also played for another local team , Bollington United , as a centre - back .
+He was a member of the team that won the FA Youth Cup in 1989 , and was a member of the team that won the FA Youth Cup in 1990 .
+He was a member of the team that won the FA Youth Cup in 1990 , and was a member of the team that won the FA Youth Cup in 1992 .
+- back .
+He was signed by Crewe Alexandra in July 2006 , and made his debut for the club in a 2 - 1 win over Rotherham United in the League Cup on 18 August 2006 .
+He was loaned out to Rotherham for the rest of the 2006 - 07 season , before being released at the end of the season .
+Uniq ↑ 22 43 19 55 37 63 24 52 Table 15 : Generated texts on the Wikitext-103 test set and uniq tokens for each texts .
+50 bpe tokens are given as prefix and the models are to generate the continuation of 100 next bpe tokens .
+45 

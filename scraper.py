@@ -10,11 +10,11 @@ import itertools
 
 ACL_URL = "https://aclanthology.org"
 VENUE_SUFFIX = "/venues/"
-MAX_PDF_COUNT = 200
+MAX_PDF_COUNT = 100
 DOWNLOADS_DIR = "data/"
 START_YEAR = 22
 END_YEAR = 0
-PAPERS_PER_PROCEEDING = 5
+PAPERS_PER_PROCEEDING = 20
 
 def retrieve_url(url):
     html_doc = requests.get(url)
