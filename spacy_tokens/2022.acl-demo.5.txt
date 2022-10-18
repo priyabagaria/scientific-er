@@ -1,0 +1,521 @@
+AnnIE : An Annotation Platform for Constructing Complete Open Information Extraction Benchmark Niklas Friedrich1 , Kiril Gashteovski2 ,
+Mingying Yu1,2 , Bhushan Kotnis2 , Carolin Lawrence2 , Mathias Niepert2,3 , Goran Glavaš1,4 1
+University of Mannheim , Mannheim , Germany 2 NEC Laboratories Europe , Heidelberg , Germany 3 University of Stuttgart , Stuttgart , Germany , 4 LMU Munich , Munich , Germany { nfriedri,minyu,gglavas}@mail.uni-mannheim.de { firstname.lastname}@neclab.eu Abstract et al. , 2020 ) , question answering
+( Khot et al. , 2017 ) and text summarization ( Xu and Lapata , 2021 ) .
+Intrinsic evaluation of OIE systems is done either manually ( Mausam et al. , 2012 ; Pal et al. , 2016 ) or with the use of evaluation benchmarks ( Stanovsky and Dagan , 2016 ; Bhardwaj et al. , 2019 ) .
+While manual evaluations are usually of higher quality , they are expensive and time consuming .
+Automated benchmark evaluations are faster and more economic than manual OIE evaluations ( Hohenecker et al. , 2020 ) , but are less reliable than human judgments of extraction correctness ( Zhan and Zhao , 2020 ) , because they are based on approximate token - level matching of system extractions against ground truth extractions .
+The main shortcoming of existing OIE benchmarks is their incompleteness : they do not exhaustively list all acceptable surface realizations of the same piece of information ( i.e. , same fact ) and , because of this , resort to unreliable scoring functions based on token - level matching between system and gold extractions ( Schneider et al. , 2017 ) .
+Obtaining complete manual OIE annotations is , however , very difficult and time - consuming .
+Annotating a complete OIE benchmark requires human annotators to write all possible combinations of extractions expressing the same fact ( i.e. , exhaustively list all acceptable surface realizations of the same fact ; see Section 3 ) .
+To facilitate and speed up this process , we introduce AnnIE , a dedicated annotation tool for constructing complete fact - oriented OIE benchmark .
+AnnIE facilitates the annotation process by ( 1 ) highlighting the tokens of interest ( e.g. , for verb - mediated extractions , it highlights the verbs , which are candidates for head words of predicates ) ; ( 2 ) providing web - based interface for annotating triples and grouping them into fact synsets , i.e. , groups of informationally equivalent extractions ( Section 3 ) .
+To the best of our knowledge , AnnIE is the first publicly - available annotation platform for constructing OIE benchmarks .
+Open Information Extraction ( OIE ) is the task of extracting facts from sentences in the form of relations and their corresponding arguments in schema - free manner .
+Intrinsic performance of OIE systems is difficult to measure due to the incompleteness of existing OIE benchmarks : ground truth extractions do not group all acceptable surface realizations of the same fact that can be extracted from a sentence .
+To measure performance of OIE systems more realistically , it is necessary to manually annotate complete facts ( i.e. , clusters of all acceptable surface realizations of the same fact ) from input sentences .
+We propose AnnIE : an interactive annotation platform that facilitates such challenging annotation tasks and supports creation of complete fact - oriented OIE evaluation benchmarks .
+AnnIE is modular and flexible in order to support different use case scenarios ( i.e. , benchmarks covering different types of facts ) and different languages .
+We use AnnIE to build two complete OIE benchmarks : one with verb - mediated facts and another with facts encompassing named entities .
+We evaluate several OIE systems on our complete benchmarks created with AnnIE .
+We publicly release AnnIE under non - restrictive license.1 1 Introduction Open Information Extraction ( OIE ) is the task of extracting relations and their arguments from natural language text in schema - free manner ( Banko et al. , 2007 ) .
+Consider the input sentence " Edmund Barton , who was born in Australia , was a judge " .
+Without the use of a pre - specified schema , an OIE system should extract the triples ( " Edmund Barton " ; " was born in " ; " Australia " ) and ( " Edmund Barton " ; " was " ; " judge " ) .
+The output of OIE systems is used in many downstream tasks , including open link prediction ( Broscheit et al. , 2020 ) , automated knowledge base construction ( Gashteovski 1 https://github.com/nfriedri/ annie - annotation - platform 44 Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics System Demonstrations , pages 44 - 60 May 22 - 27 , 2022 © 2022 Association for Computational Linguistics  We showcase AnnIE2 by creating two complete fact - based OIE benchmarks : ( 1 ) benchmark of verb - mediated facts on English , German , Chinese , Galician , Arabic and Japanese , making this gold data the first such OIE resource on languages other than English ; ( 2 ) benchmark for facts associating named entities ( for English only ) .
+We then benchmark several state - of - the - art OIE systems on these fact - based benchmarks and demonstrate that they are significantly less effective than indicated by existing OIE benchmarks that use token - level scoring .
+We hope that AnnIE motivates the creation of many more fact - based ( as opposed to token - level ) OIE evaluation benchmarks .
+2 treebank projection across languages ( Akbik and Vollgraf , 2017 ) .
+For annotating OIE extractions , however , there are no publicly available tools .
+The two commonly used benchmarks — OIE2016 ( Stanovsky and Dagan , 2016 ) and CaRB ( Bhardwaj et al. , 2019)—only provide annotated data and no dedicated annotation tool .
+OIE2016 uses a dataset from a similar task ( QA - SRL ) , which is then automatically ported to OIE .
+This approach does not require an annotation tool , but the quality of the benchmark ( i.e. , ground truth extractions ) decreases due to the automatic label projection ( Zhan and Zhao , 2020 ) .
+CaRB addresses this issue by sampling from the same input sentences used by OIE2016 , and then crowdsourcing manual extractions .
+However , their annotation OIE interface has four major limitations : ( 1 ) it can not be used to create complete fact - based OIE benchmarks ( Section 3 ) , i.e. , it does not allow for different extractions ( e.g. , triples ) that correspond to the same fact ; this leads to incomplete annotations and unreliablly lenient token - overlap - based evaluation measures ; ( 2 ) it focuses only on one type of OIE ( verb - mediated extractions ) ; ( 3 ) it is not publicly available ; ( 4 ) it does not support annotations for languages other than English .
+Related Work 2.1 Evaluation of OIE Systems OIE systems are evaluated either manually ( Mausam et al. , 2012 ; Pal et al. , 2016 ; Gashteovski et al. , 2019 ) , w.r.t .
+a downstream task ( Mausam , 2016 ; Lin et al. , 2020 ) , or with the use of evaluation benchmarks ( Stanovsky and Dagan , 2016 ; Bhardwaj et al. , 2019 ) .
+Manual evaluations are usually of higher quality because they are performed by one or more expert annotators ( Del Corro and Gemulla , 2013 ) .
+They are , however , expensive and time consuming , which makes the development of OIE systems very slow .
+On the other hand , downstream evaluation of OIE systems is faster , but provides insights only about their performance w.r.t . particular tasks and does not provide insights on the intrinsic ( i.e. , task - agnostic ) correctness of the extractions .
+Finally , using evaluation benchmarks is both taskagnostic and fast , though current benchmarks might contain noise ( Zhan and Zhao , 2020 ) .
+Moreover , current benchmarks suffer from incompleteness ; i.e. , they are not designed in a manner that aims to contain all possible extractions from an input sentence .
+Therefore , they rely on lenient token - overlap based evaluation , which could result in misleading results ( Lechelle et al. , 2019 ) .
+To address this , we move away from such token - based evaluations and move towards fact - based evaluation ( Section 3 ) .
+3
+Due to their incompleteness , previous benchmarks lack clarity about whether an extraction indeed represents a correct fact or not .
+In particular , given a system extraction , they do not assign a binary score ( correct / incorrect ) , but rather calculate perslot token overlap scores .
+Consider , for example , the input sentence from Table 1 and the scores that the recent OIE benchmark CaRB ( Bhardwaj et al. , 2019 ) assigns to extractions t1 to t3 .
+Because all tokens for each slot for t1 − t3 are also present in the gold extraction , CaRB credits these extractions with a perfect precision score , even though the extractions clearly state incorrect facts .
+In similar vein , the CaRB recall score of the extraction t4 is lower than the recall score of t3 , even though t4 captures the correct core fact and t3 does not .
+To address these issues , we propose moving away from such lenient token - overlap scoring and going towards fact - level exact matching .
+To this end , we propose an evaluation framework , dubbed BenchIE ( Gashteovski et al. , 2022 ) , for OIE evaluation based on facts , not tokens .
+Here , the annotator is instructed to exhaustively list all possible surface 2.2 Annotation Tools To facilitate the annotation process of NLP tasks , many interactive annotation tools have been designed .
+Such work covers tasks like sequence labelling ( Lin et al. , 2019 ; Lee et al. , 2020 ) , coreference resolution ( Bornstein et al. , 2020 ) and 2 Fact - Based OIE Evaluation Video demo : https://youtu.be/2wn75U8Lc5w 45  Input sentence : " Sen. Mitchell is confident he has sufficient votes to block such a measure with procedural actions . "
+CaRB gold extraction : ( " Sen. Mitchell " ; " is confident he has " ; " sufficient votes to block ... procedural actions " )
+t1 t2 t3 Input OIE extraction ( " Sen. Mitchell " ; " is confident he has " ; " sufficient " ) ( " Sen. Mitchell " ; " is confident he has " ; " sufficient actions " ) ( " Sen. Mitchell " ; " is confident he has " ; " sufficient procedural actions " )
+CaRB ( P / R ) 1.00 0.44 1.00 0.50 1.00 0.56 t4 ( " Sen. Mitchell " ; " is confident he has " ; 1.00 " sufficient votes " ) 0.50 Fact - based 0 0 0 1 Table 1 : Difference in scores between CaRB and fact - based evaluation .
+For the input sentence , CaRB provides only one extraction which covers all the words in the sentence .
+Then , for each input OIE extraction ( from t1 to t4 ) it calculates token - wise precision and recall scores w.r.t .
+the golden annotation .
+Fact - based evaluation ( with all acceptable extractions of the fact exhaustively listed ) allows for exact matching against OIE extractions .
+realizations of the same fact , allowing for a binary judgment ( correct / incorrect ) of correctness of each extraction ( it either exactly matches some of the acceptable gold realizations of some fact or it does not match any ) .
+The example in Table 2 illustrates the concept of a fact synset : a collection of all acceptable extractions for the same fact ( i.e. , same piece of knowledge ) .
+Because benchmarks based on fact synsets are supposed to be complete , a system OIE extraction is considered correct if and only if it exactly matches any of the gold extractions from any of the fact synsets .
+The number of true positives ( TPs ) is the number of fact synsets ( i.e. , different facts ) “ covered ” by at least one system extraction .
+This way , a system that extracts N different triples of the same fact , will be rewarded only once for the correct extraction of the fact .
+False negatives ( FNs ) are then fact synsets not covered by any of the system extractions .
+Finally , each system extraction that does not exactly match any gold triple ( from any synset ) is counted as a false positive ( FP ) .
+We then compute Precision , Recall , and F1 score from TP , FP , and FN in the standard fashion .
+For more details on the evaluation framework , see ( Gashteovski et al. , 2022 ) .
+4 monly constitute parts of extractions of interest .
+For example , most OIE systems focus on extracting verb - mediated triples ( Angeli et al. , 2015 ; Kolluru et al. , 2020b ) .
+In such case , verbs clearly represent tokens of interest and are candidates for head words of fact predicates .
+Other example of tokens of interest may be named entities , which could be useful for extracting information from domain - specific text .
+There has been prior work on extracting open information from specific domains , including the biomedical ( Wang et al. , 2018 ) , legal ( Siragusa et al. , 2018 ) and scientific domain ( Lauscher et al. , 2019 ) .
+In this work , it is important to extract open relations between named entities .
+Accordingly , highlighting mentions of named entities then facilitates manual extraction of the type of facts that the benchmark is supposed to cover ( i.e. , relations between named entities ) .
+AnnIE allows the user to define a custom function that yields the tokens of interest from the input sentence and then highlights these tokens for the annotator with a background color ( Figure 2 ) .
+To further facilitate the manual annotations , future versions of AnnIE could also include recommendations for whole OIE triples ( e.g. , by recommending high - confidence extractions from already existing OIE systems ) or for slots ( e.g. , given a subject , recommend a potential relation ; or given a relation , recommend candidates for the arguments ) .
+We leave such improvements for future work .
+AnnIE :
+Platform Description AnnIE is a web - based platform that facilitates manual annotations of fact - based OIE benchmarks .
+In this section , we discuss : ( 1 ) the functionality of highlighting tokens of interest ; ( 2 ) how AnnIE facilitates creation of complete fact - based OIE benchmarks ; ( 3 ) AnnIE ’s software architecture ; and ( 4 ) AnnIE ’s web interface and its multilingual support .
+4.2 Annotating Fact Synsets Given a sentence with highlighted tokens of interest , the annotator can start constructing fact synsets .
+Fact synsets are clusters of fact - equivalent extractions .
+AnnIE currently supports only the annotation of triples : for each extraction / triple the user first selects which slot she wants to annotate ( subject , predicate , or object ) and then selects the tokens 4.1 Tokens of Interest One of the key functionalities of AnnIE is its ability to highlight tokens of interest – tokens that com46  Input sentence : " Sen. Mitchell is confident he has sufficient votes to block such a measure with procedural actions . "
+f1 ( " Sen. Mitchell " | " he " ; " is " ; " confident [ he has sufficient ...
+actions ] " )
+f2 ( " Sen. Mitchell " | " he " ; ( " Sen. Mitchell " | " he " ; " is confident he has " ; " is confident he has " ; " sufficient votes " ) " suff .
+votes to block [ such ] [ a ] measure " ) f3 ( " Sen. Mitchell " | " he " ; ( " Sen. Mitchell " | " he " ; ( " Sen. Mitchell " | " he " ; " is conf .
+he has sufficient votes to block " " is confident he has ... to block [ such ] " ; " is confident he has ... to block [ such ]
+[ a ] " ; " [ such ] [ a ] measure " ) " [ a ] measure " ) " measure " ) f4
+( " Sen. Mitchell " | " he " ; ( " Sen. Mitchell " | " he " ; " is conf .
+he has ...
+[ such ] [ a ] measure with " ; " is confident he has ...
+[ such ] [ a ] measure " ; " procedural actions " ) " with procedural actions " )
+Table 2 : Example sentence with four fact synsets ( f1 – f4 ) .
+We account for entity coreference and accept both " Sen. Mitchell " and " he " as subjects : the delimiter “ | ” is a shorthand notation for different extractions .
+In the same vein , square brackets ( [ ] ) are a shorthand notation for multiple extractions : triples both with and without the expression(s ) in the brackets are considered correct .
+Flask3 , a popular light - weight Python web framework .
+We implemented HTTP endpoints for receiving requests and sending responses .
+Additionally , Flask hosts the frontend ( HTML and CSS ) files as a web server .
+The Flask server interacts with ( 1 ) the NLP library SpaCy4 ( which we employ for POS - tagging and NER , in service of highlighting tokens of interest ) ; ( 2 ) a configuration file ; ( 3 ) data files on the local hard drive and ( 4 ) the frontend ( i.e. , the web interface ) .
+AnnIE ’s backend is highly modularized , so that any component may easily be further customized or replaced with a different module .
+For example , the SpaCy - based NLP module ( for POS - tagging and NER ) can easily be replaced with any other NLP toolkit , e.g. , Stanza5 ( Qi et al. , 2020 ) .
+AnnIE is also easily customizable through a configuration file , where the user may specify the types of tokens to be highlighted or select colors for highlighting .
+The I / O module expects the input ( a collection of sentences for OIE annotation ) to be in JSON format and saves the annotated fact synsets in JSON as well .
+Figure 1 : Software architecture of AnnIE .
+that constitute that slot .
+Each token ( part of one of the three slots ) can additionally be marked as “ optional ” , which means that the tool will create variants of that extraction both with and without those tokens .
+Once a triple is fully denoted ( i.e. , tokens for all three slots selected ) , the annotator chooses whether ( 1 ) the triple is a different variant of an already existing fact ( i.e. , existing fact synset ) , in which case the triple is added to an existing cluster or ( 2 ) a first variant of a new fact , in which case a new cluster ( i.e. , fact synset ) is created and the triple added to it .
+To facilitate this decision , the annotator can at any time review the already existing fact synsets .
+Figure 3 shows the interface for creating triples and adding them to fact synsets .
+Frontend .
+The application frontend is implemented in JavaScript and based on the Bootstrap library and custom CSS stylesheets .
+We adopt model - view - controller ( MVC ) architecture for the frontend : it uses a data structure ( i.e. , model ) capturing the entire annotation process ( i.e. , information about the annotation , loaded text file , current triple in annotation , etc . ; you can find more details in the Appendix , Section A.2 ) .
+Based on the current state of the model , the frontend renders the interface ( i.e. , view ) by enabling and disabling particular annotation functionality .
+The controller connects the two : it renders the view based on the current state of the model .
+We implemented 4.3 Platform Architecture AnnIE is a simple local executable web application ( Figure 1 ) that consists of a backend layer and a frontend layer .
+It starts a local server that provides a user interface accessible from any browser that supports JavaScript . 3 https://github.com/pallets/flask https://spacy.io/ 5 https://stanfordnlp.github.io/stanza/ 4 Backend . AnnIE ’s backend server is based on 47  Figure 2 : Highlighting tokens of interest .
+In this example , tokens of interest are verbs and named entities .
+additional I / O scripts that complement the core functionality of the main controller .
+These scripts handle the formatting of the output file as well as the loading of the data from the input files .
+Saving or loading data is customizable : one merely needs to overwrite the load ( ) and save ( ) methods of the controller .
+Data Flow .
+Upon selection of the input file , the data is sent from the frontend to the backend via an HTTP request .
+In the backend , the sentence is then tokenized , POS - tagged , and processed for named entities with the NLP module ( we rely on SpaCy ) .
+The tokenized and labeled sentence is then sent as a JSON object to the frontend , where each token is displayed as one button ( Figure 2 ) .
+The default version of the tool allows the user to choose ( in the configuration file ) between four coloring schemes for highlighting token buttons .
+Figure 3 : Manual labeling of OIE triples .
+The user selects tokens from the tokenized input sentence and places them into the correct slot : subject ( green ) , predicate ( yellow ) or object ( blue ) .
+Then , the user adds the extracted triple either to an active fact cluster ( i.e. , fact synset ) or to a new one .
+The user can also select which tokens are optional by clicking the " Optional " button on an active token selection .
+For larger version of the same figure , see Figure 11 in Appendix A.6 .
+4.4 Web Interface and Language Support 5
+The user can start from scratch by uploading a text file that contains unannotated sentences , or load previously saved work ( JSON file ) .
+For each sentence , the user starts from a full set of sentence tokens with highlighted tokens of interest ( Figure 2 ) .
+The user then constructs triples and places them into fact synsets ( Figure 3 ) .
+At any point during the annotation , the user can generate human - readable output of the annotated extractions and download it as a text file in a tab - separated format ( Figure 4 ) .
+Alternatively , the user can save the annotation progress as a JSON file that can later be loaded in order to continue annotating .
+Demonstration Study To showcase our tool ’s suitability for different OIE scenarios , we generated two complete fact - based OIE benchmarks using AnnIE : ( 1 ) a benchmark for verb - mediated facts ; ( 2 ) a benchmark with facts involving named entities ( NEs ) .
+We then evaluated several OIE systems and compared their fact - based scores with the token - overlap lenient scores of the existing CaRB benchmark ( Bhardwaj et al. , 2019 ) .
+5.1 Experimental Setup OIE Systems .
+We comparatively evaluated several state - of - the - art OIE systems against the gold fact synsets annotated with AnnIE .
+For OIE on English , we used ClausIE ( Del Corro and Gemulla , 2013 ) , Stanford ( Angeli et al. , 2015 ) , MinIE ( Gashteovski et al. , 2017 ) , ROIE ( Stanovsky et al. , 2018 ) and OpenIE6
+( Kolluru et al. , 2020a ) .
+For Chinese , German , Galician , Japanese and Arabic , we used the supervised M2 OIE ( Ro et al. , 2020 ) model , which is based on multilingual BERT ( Devlin et al. , 2019 ) , trained on large English dataset ( Zhan AnnIE supports OIE annotations for sentences in any language supported by its NLP module ( i.e. , available POS - tagging and NER models ) .
+By default , AnnIE relies on SpaCy and can therefore support creation of OIE benchmarks for all languages for which SpaCy provides POS - tagging and NER models .
+Section A.3 from the appendix provides details about how this module can be adjusted to the user ’s preference .
+48  EN ZH DE AR GL JA 2 2 2 2 2 ClausIE
+MinIE Stanford ROIE OpenIE6 M OIE M OIE M OIE M OIE M OIE CaRB P Fact - based ∆ 0.58 0.50 +0.08 0.45 0.43 +0.02 0.17 0.44 0.11 0.20 +0.06 +0.24 0.48 0.31 +0.17 / 0.18 / / 0.09 / / 0.16 / / 0.15
+/ / 0.00 / CaRB R Fact - based ∆ 0.53 0.26 +0.27 0.44 0.28 +0.16 0.29 0.60 0.16 0.09 +0.13 +0.51 0.67 0.21
++0.46 / 0.10
+/ / 0.03 / / 0.03 / / 0.06 / / 0.00 / CaRB F1 Fact - based ∆ 0.56 0.34 +0.22 0.44 0.34 +0.10 0.22 0.51 0.13 0.13 +0.09 +0.38 0.56 0.25 +0.31 / 0.13 / / 0.04 / / 0.05 / / 0.09 / / 0.00 / Table 3 : Comparison of performance of OIE systems on fact - based v.s. CaRB benchmarks for English ( E N ) , Chinese ( Z H ) , German ( D E ) , Arabic ( A R ) , Galician ( G L ) and Japanese ( JA ) .
+Metrics used : precision ( P ) , recall ( R ) and F1 score ( F1 ) .
+∆ is the difference between the CaRB scores and the fact - based scores .
+Bold numbers indicate highest score for English per row ( i.e. , highest score for P / R / F1 per benchmark ) or highes score difference per row ( i.e. , highest ∆ for P / R / F1 per benchmark ) .
+The fact - based benchmark on English reveals that CaRB overestimates the performance of OIE systems , but with the help of AnnIE it is easily possible to create benchmarks which provide more reliable performance estimates .
+Creating such fact - based benchmarks for a series of other languages highlights the need for future OIE research to focus on langauges other than English .
+due to limited resources .
+Then , the native speakers annotated fact synsets in these languages with AnnIE .
+Due to limited resources , the sentences for these languages were translated and then annotated with OIE extractions by one annotator per language .
+Finally , we evaluated one OIE system for each language on this benchmark .
+NE - centric Triples .
+We used AnnIE to build a benchmark consisting of facts connecting named entities ( NEs ): triples in which both subjects and objects are named entities .
+Since NEs are frequently mentioned in news stories , we selected the sentences for annotation from the NYT10k dataset ( Gashteovski et al. , 2017 ) , a random sample of 10k sentences from the New York Times corpus ( Sandhaus , 2008 ) .
+We split the NE - centric benchmark in two parts : ( 1 ) NE-2 : 150 sentences from NYT10k with exactly 2 NEs ( as detected by SpaCy ) ; ( 2 ) NE-3 + : we sample 150 sentences from NYT10k such that they have 3 or more NE mentions .
+The annotation guidelines , while similar to those for the verb - mediated triples , differ in two important aspects : ( 1 ) the annotator should extract only the facts in which both arguments are named entities ; ( 2 ) besides verb - mediated relations , the annotator was allowed to extract noun - mediated relations too ; e.g. , ( " Sundar Pichai " ; " CEO " ; " Google " ) .
+Figure 4 : Human - readable representation of the annotated extractions .
+Annotations can be downloaded as a human - readable file or as a JSON file ( loadable for further annotation with AnnIE ) .
+and Zhao , 2020 ) and transferred to the target language by means of its multilingual encoder .
+We trained M2 OIE using the implementation and recommended hyperparameter setup from the original work ( Ro et al. , 2020 ) .
+Verb - Mediated Triples .
+We first evaluate the OIE systems in the most common setup : for verbmediated facts .
+In this scenario , OIE system extractions are triples with verb - phrase predicates .
+We randomly sampled 300 sentences from the CaRB benchmark , and two experts independently annotated them manually for fact synsets with AnnIE ( we provide the annotation guidelines in the Appendix , Section A.4 ) .
+Then , the annotators merged the annotations by resolving the disagreements through a discussion .
+The annotation effort was approximately two working weeks per annotator .
+To show that AnnIE is in principle language agnostic , native speakers of German , Chinese , Japanese and Galician translated these 300 sentences to their respective languages .
+For Arabic , a native speaker managed to translate the first 100 sentences .
+only 5.2 Results and Discussion English OIE .
+We score the OIE systems against the gold fact synsets produced with AnnIE , using the fact - based evaluation protocol ( Section 3 ) .
+For the verb - mediated extractions , we compare our factbased evaluation scores against the token - overlap 49  of OIE systems on the NE - centric benchmark .
+In both subsets of 150 sentences — NE-2 and NE-3 + — only a fraction of them contain actual knowledge facts that connect a pair of NEs ( 59/150 and 97/150 respectively ) .
+Because the OIE systems used in the evaluation are not specifically designed to extract NE - centric facts , we make the evaluation fairer by pruning the system extractions before fact - based evaluation : we keep only the triples that contain in both subject and object NEs found among subjects and objects of gold extractions .
+In other words , we primarily test whether the OIE systems extract acceptable predicates between NEs between which there is a predicate in the gold standard .
+The results show that the current OIE systems extract very few NE - centric triples ( e.g. , ClausIE extracts only 4 triples for the NE-2 dataset and 10 for the NE-3 + dataset , see Table 4 ) .
+Because of this , one should intepret the results in Table 4 with caution .
+This evaluation , nonetheless shows that the current OIE systems are not ill - suited for a NE - centric OIE task , warranting more research efforts in this direction . ClausIE
+MinIE Stanford ROIE OIE6 ( 4 / 10 ) ( 26 / 48 ) ( 12 / 22 ) P NE-2 + NE-3 0.75 0.78 0.58 0.54 0.45 0.63 0.05 0.38 0.05 0.32 R NE-2 + NE-3 0.05 0.04 0.23 0.13 0.08 0.06 0.02 0.05 0.02 0.03 F1 NE-2 + NE-3 0.09 0.07 0.33 0.21 0.13 0.11 0.03 0.08 0.02 0.06 ( 2 / 7 ) ( 8 / 20 ) Table 4 : Performance of OIE systems on fact - based evaluation on NE - centric triples .
+NE-2 / NE-3 + : results on sentences that contain 2 / 3 or more NEs ( labelled with SpaCy ) .
+Numbers in brackets below an OIE system name indicate the number of OIE triples on which the evaluation was done for NE-2 / NE-3 + .
+Bold numbers indicate highest score per row .
+scores of CaRB ( Bhardwaj et al. , 2019 ): the results are shown in Table 3 .
+Comparison of Fact - based and CaRB scores indicates that : ( 1 ) CaRB largely overestimates the performance of OIE systems ; ( 2 ) current OIE systems predominantly fail to extract correct facts , which strongly points to the need for creating complete fact - oriented benchmarks , a task that AnnIE facilitates .
+For more detailed discussion , multi - faceted evaluation and error analysis , see Gashteovski et al. ( 2022 ) .
+6 Conclusions Exhaustively annotating all acceptable OIE triples is a tedious task , but important for realistic intrinsic evaluation of OIE systems .
+To support annotators , we introduced AnnIE : annotation tool for constructing comprehensive evaluation benchmarks for OIE .
+AnnIE allows custom specification of tokens of interests ( e.g. , verbs ) and is designed for creating fact - oriented benchmarks in which the factequivalent – yet superficially differing – extractions are grouped into fact synset .
+AnnIE ’s lightweight architecture , easy installation and customizable components make it a practical solution for future OIE annotation .
+Multilingual OIE .
+Finally , Table 3 shows that the results for OIE systems in languages other than English are significantly worse , which shows that more research is needed in this direction .
+The results for Chinese OIE seem to be particularly encouraging , as the difference of the F1 score between some OIE systems in English and M2 OIE in Chinese is not too large as it is between English and the other languages .
+For example , M2 OIE in Chinese has the same F1 score as Stanford ’s OIE system and ROIE .
+We applied the same training strategy for Japanese , but the F1 score of this OIE system is 0 .
+This indicates that more research is needed for Japanese in defining the problem well and proposing methods for solving it .
+Nevertheless , we release the gold datasets for OIE in all investigated languages : English , German , Galician , Chinese , Japanese and Arabic ; which we believe to be an important resource for research for subsequent multilingual OIE .
+Figure 12 and Figure 13 from the Appendix show an example sentence and its corresponding OIE annotations in different languages .
+For a more detailed discussion on the results of multilingual OIE evaluation , see Kotnis et al. ( 2022 ) .
+Acknowledgments We thank the anonymous reviewers for their invaluable feedback and support .
+References Alan Akbik and Roland Vollgraf .
+2017 .
+The Projector : An Interactive Annotation Projection Visualization Tool .
+In Proceedings of the Conference on Empirical Methods in Natural Language Processing ( EMNLP ): System Demonstrations , pages 43–48 .
+Gabor Angeli , Melvin Jose Johnson Premkumar , and Christopher D. Manning . 2015 .
+Leveraging Linguistic Structure For Open Domain Information Extrac NE - centric OIE .
+Table 4 shows the performance 50  tion .
+In Proceedings of the Annual Meeting of the Association for Computational Linguistics ( ACL ) , pages 344–354 .
+Fact - Based Open Information Extraction Evaluation .
+In Annual Meeting of the Association for Computational Linguistics ( ACL ) .
+Michele Banko , Michael J Cafarella , Stephen Soderland , Matthew Broadhead , and Oren Etzioni . 2007 .
+Open Information Extraction from the Web .
+In Proceedings of the International Joint Conferences on Artificial Intelligence ( IJCAI ) , pages 2670–2676 .
+Patrick Hohenecker , Frank Mtumbuka , Vid Kocijan , and Thomas Lukasiewicz . 2020 .
+Systematic Comparison of Neural Architectures and Training Approaches for Open Information Extraction .
+In Proceedings of the Conference on Empirical Methods in Natural Language Processing ( EMNLP ) , pages 8554–8565 .
+Sangnie Bhardwaj , Samarth Aggarwal , and Mausam Mausam .
+2019 .
+CaRB : A Crowdsourced Benchmark for Open IE .
+In Proceedings of the Conference on Empirical Methods in Natural Language Processing and the International Joint Conference on Natural Language Processing ( EMNLP - IJCNLP ) , pages 6263–6268 .
+Tushar Khot , Ashish Sabharwal , and Peter Clark .
+2017 .
+Answering Complex Questions Using Open Information Extraction .
+In Proceedings of the Annual Meeting on Association for Computational Linguistics ( ACL ) , pages 311–316 .
+Aaron Bornstein , Arie Cattan , and Ido Dagan . 2020 .
+CoRefi : A Crowd Sourcing Suite for Coreference Annotation .
+In Proceedings of the Conference on Empirical Methods in Natural Language Processing ( EMNLP ): System Demonstrations .
+Keshav Kolluru , Vaibhav Adlakha , Samarth Aggarwal , Soumen Chakrabarti , et al. 2020a .
+OpenIE6 :
+Iterative Grid Labeling and Coordination Analysis for Open Information Extraction .
+In Proceedings of the Conference on Empirical Methods in Natural Language Processing ( EMNLP ) , pages 3748–3761 .
+Samuel Broscheit , Kiril Gashteovski , Yanjie Wang , and Rainer Gemulla . 2020 .
+Can We Predict New Facts with Open Knowledge Graph Embeddings ?
+A Benchmark for Open Link Prediction .
+In Proceedings of the Annual Meeting on Association for Computational Linguistics ( ACL ) , pages 2296–2308 .
+Keshav Kolluru , Samarth Aggarwal , Vipul Rathore , Mausam , and Soumen Chakrabarti . 2020b . IMoJIE : Iterative Memory - Based Joint Open Information Extraction .
+In Proceedings of the Annual Meeting of the Association for Computational Linguistics ( ACL ) , pages 5871–5886 .
+Luciano Del Corro and Rainer Gemulla . 2013 .
+ClausIE : Clause - Based Open Information Extraction .
+In Proceedings of the International World Wide Web Conferences ( WWW ) , pages 355–366 .
+Bhushan Kotnis , Kiril Gashteovski , Daniel Oñoro Rubio , Ammar Shaker , Vanesa Rodriguez - Tembras , Makoto Takamoto , Mathias Niepert , and Carolin Lawrence . 2022 .
+MILLIE :
+Modular & Iterative Multilingual Open Information Extraction .
+In Proceedings of the Annual Meeting on Association for Computational Linguistics ( ACL ) .
+Jacob Devlin , Ming - Wei Chang , Kenton Lee , and Kristina Toutanova . 2019 .
+BERT : Pre - training of Deep Bidirectional Transformers for Language Understanding .
+In Proceedings of the Conference of the North American Chapter of the Association for Computational Linguistics - Human Language Technologies ( NAACL - HLT ) , pages 8554–8565 .
+Anne Lauscher , Yide Song , and Kiril Gashteovski . 2019 .
+MinScIE :
+Citation - centered Open Information Extraction .
+In 2019 ACM / IEEE Joint Conference on Digital Libraries ( JCDL ) , pages 386–387 . IEEE .
+Kiril Gashteovski , Rainer Gemulla , and Luciano Del Corro .
+2017 .
+MinIE : Minimizing Facts in Open Information Extraction .
+In Proceedings of the Conference on Empirical Methods in Natural Language Processing ( EMNLP ) , pages 2630–2640 .
+William Lechelle , Fabrizio Gotti , and Phillippe Langlais . 2019 .
+WiRe57 : A Fine - Grained Benchmark for Open Information Extraction .
+In Proceedings of the Linguistic Annotation Workshop ( LAW@ACL ) , pages 6–15 .
+Kiril Gashteovski , Rainer Gemulla , Bhushan Kotnis , Sven Hertling , and Christian Meilicke .
+2020 .
+On Aligning Openie Extractions with Knowledge Bases : A Case Study .
+In Proceedings of the First Workshop on Evaluation and Comparison of NLP Systems , pages 143–154 .
+Dong - Ho Lee , Rahul Khanna , Bill Yuchen Lin , Jamin Chen , Seyeon Lee , Qinyuan Ye , Elizabeth Boschee , Leonardo Neves , and Xiang Ren . 2020 .
+LEANLIFE : A Label - Efficient Annotation Framework Towards Learning from Explanation .
+In Proceedings of the Annual Meeting on Association for Computational Linguistics ( ACL Demo ) , pages 372–379 .
+Kiril Gashteovski , Sebastian Wanner , Sven Hertling , Samuel Broscheit , and Rainer Gemulla . 2019 .
+OPIEC :
+An Open Information Extraction Corpus .
+In In Proceedings of the Conference on Automated Knowledge Base Construction ( AKBC ) .
+Bill Yuchen Lin , Dong - Ho Lee , Frank F Xu , Ouyu Lan , and Xiang Ren . 2019 .
+AlpacaTag :
+An Active Learning - based Crowd Annotation Framework for Sequence Tagging .
+In Proceedings of the Annual Kiril Gashteovski , Mingying Yu , Bhushan Kotnis , Carolin Lawrence , Mathias Niepert , and Goran Glavas̆. 2022 . BenchIE : A Framework for Multi - Faceted 51  Gabriel Stanovsky , Julian Michael , Luke Zettlemoyer , and Ido Dagan . 2018 .
+Supervised Open Information Extraction .
+In Proceedings of the Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies ( NAACL - HLT ) , pages 885–895 .
+Meeting of the Association for Computational Linguistics ( ACL ): System Demonstrations , pages 58 – 63 .
+Xueling Lin , Haoyang Li , Hao Xin , Zijian Li , and Lei Chen . 2020 .
+KBPearl : A Knowledge Base Population System Supported by Joint Entity and Relation Linking .
+In Proceedings of the Very Large Data Base Endowment ( PVLDB ) , pages 1035–1049 .
+Xuan Wang , Yu Zhang , Qi Li , Yinyin Chen , and Jiawei Han . 2018 .
+Open Information Extraction with Meta - pattern Discovery in Biomedical Literature .
+In Proceedings of the 2018 ACM International Conference on Bioinformatics , Computational Biology , and Health Informatics ( BCB ) , pages 291–300 .
+Mausam . 2016 .
+Open Information Extraction Systems and Downstream Applications .
+In Proceedings of the twenty - fifth international joint conference on artificial intelligence , pages 4074–4077 .
+Yumo Xu and Mirella Lapata . 2021 .
+Generating Query Focused Summaries from Query - free Resources .
+In Annual Meeting of the Association for Computational Linguistics ( ACL ) , page 6096–6109 .
+Mausam , Michael Schmitz , Robert Bart , Stephen Soderland , and Oren Etzioni . 2012 .
+Open Language Learning for Information Extraction .
+In Proceedings of the Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning ( EMNLPCoNLL ) , pages 523–534 .
+Junlang Zhan and Hai Zhao .
+2020 .
+Span Model for Open Information Extraction on Accurate Corpus .
+In Proceedings of the AAAI Conference on Artificial Intelligence ( AAAI ) , pages 9523–9530 .
+Harinder Pal et al. 2016 .
+Demonyms and Compound Relational Nouns in Nominal Open IE .
+In Proceedings of the 5th Workshop on Automated Knowledge Base Construction , pages 35–39 .
+Peng Qi , Yuhao Zhang , Yuhui Zhang , Jason Bolton , and Christopher D Manning . 2020 .
+Stanza : A Python Natural Language Processing Toolkit for Many Human Languages .
+In Association for Computational Linguistics ( ACL ) , page 101–108 .
+Youngbin Ro , Yukyung Lee , and Pilsung Kang . 2020 .
+Multiˆ2OIE : Multilingual Open Information Extraction Based on Multi - Head Attention with BERT .
+In Findings of the Association for Computational Linguistics : EMNLP 2020 , pages 1107–1117 , Online .
+Association for Computational Linguistics .
+Evan Sandhaus .
+2008 .
+The new york times annotated corpus .
+Linguistic Data Consortium , Philadelphia , 6(12):e26752 .
+Rudolf Schneider , Tom Oberhauser , Tobias Klatt , Felix A. Gers , and Alexander Löser .
+2017 .
+Analysing errors of open information extraction systems .
+In Proceedings of the First Workshop on Building Linguistically Generalizable NLP Systems , pages 11 – 18 , Copenhagen , Denmark .
+Association for Computational Linguistics .
+Giovanni Siragusa , Rohan Nanda , Valeria De Paiva , and Luigi Di Caro . 2018 .
+Relating Legal Entities via Open Information Extraction .
+In Research Conference on Metadata and Semantics Research , pages 181–187 .
+Springer .
+Gabriel Stanovsky and Ido Dagan . 2016 .
+Creating a Large Benchmark for Open Information Extraction .
+In Proceedings of the International Conference on Empirical Methods in Natural Language Processing ( EMNLP ) , pages 2300–2305 .
+52  A.2 Data model structure used in the frontend The data model structure used in the frontend is shown on Figure 9 .
+A.3
+By extending the definition of the function read_config_file ( ) inside the backend file tokenizer.py , further languages can be included .
+Therefore , SpaCy simply needs to be forced to load the appropriate language model .
+For details , see code snippet showing how to adapt the tokenizer.py script to accept further language models in Figure 10 .
+Figure 5 : Add new class to css A Multilinguality Appendix A.1 Highlighting Functions A.4
+The tool is designed to make customizations rather easily .
+For adjusting the color scheme , the color “ hex”-values inside the style.css files need to be set to the desired color codes .
+This needs to be done to the button itself with the desired color as well as to the “ hover ” property of the button , where usually a darker version of the same color is used .
+If complete new labels are introduced to the tool , the css needs to include an approriate class to handle these as shown in Figure 5 .
+A.4.1 Annotation Guidelines ( English ) General Principle
+The annotator should manually extract verbmediated triples from a natural language sentence .
+Each triple should represent two entities or concepts , and the verb - mediated relation between them .
+For example , from the input sentence " Michael Jordan , who is a former basketball player , was born in Brooklyn .
+" , there are three entities and concepts — Michael Jordan , former basketball player and Brooklyn — which are related as follows : ( " Michael Jordan " ; " is " ; " former basketball player " ) and ( " Michael Jordan " ; " was born in " ; " Brooklyn " ) .
+Once the triple is manually extracted , it should be placed into the correct fact synset ( see Section A.4.2 ) .
+In case any new coloring schemes are required , these can either be entered additionally or exchanged against the standard functions implementing the scheme above .
+The different colorings are applied using the functions fullColoring ( ) , verbColoring ( ) , namedEntitiesColoring ( ) , and noneColoring ( ) inside GraphicalInterface.js .
+These functions can be adjusted by changing the switch statements handling which tokens need to be colorized depending on their label .
+There , new cases can simply be added or superfluous colored labels can be removed .
+Another option is to add new coloring functions .
+These can rely on the provided ones .
+They simply need to be registered to the tool by being added to the first switch statement inside the function createTaggedContent ( ) .
+An example of such an function is given in Figure 6 , while the " register " procedure is shown in Figure 7 .
+A.4.2 Fact Synsets Once a triple is manually extracted , the annotator should place the triple into its corresponding fact synset ( details about fact synsets in Section 3 ) .
+In case there is no existing fact synset for the manually extracted triple , the annotator should create one and place the triple in that synset .
+Coreference .
+The annotator should place extractions that refer to the same entity or concept under the same fact synset .
+Consider the following input sentence : " His son , John Crozie , was an aviation pioneer .
+" ; The following triples should be placed in the same fact synset : • ( " His son " ; " was " ; " [ an]6 aviation pioneer " )
+In both cases , additionally , the function downgrade ( ) needs to be adjusted accordingly to the above - mentioned changes to ensure that the buttons can be selected and deselected properly .
+This step is shown in Figure 8 .
+• ( " J. Crozie " ; " was " ; " [ an ] aviation pioneer " ) 6 words in square brackets indicate optional tokens ( see Section A.4.3 ) 53  Figure 6 : Example of a new coloring function Figure 7 : " Register " new coloring function Figure 8 : Necessary adjustments to downgrade ( ) 54  because " His son " and " John Crozie " refer to the same entity .
+Token placements .
+The annotator should consider placing certain tokens in different slots , without damaging the meaning of each the fact .
+Consider the input sentence " Michael Jordan was born in Brooklyn . " .
+There is one fact synset and its corresponding triples : f1 ( " M. J. " ; " was born in " ; " Brooklyn " ) ( " M. J. " ; " was born " ; " in Brooklyn " )
+In the first triple , the preposition " in " is in the relation , while in the second it is in the object .
+The annotator should allow for such variations , because OIE systems should not be penalized for placing such words in different slots .
+A.4.3 Optional Tokens If possible , the annotator should label as optional all tokens that can be omitted in an extraction without damaging its semantics .
+Such tokens include determiners ( e.g. , a , the , an ) , honorifics ( e.g. , [ Prof. ] Michael Jordan ) or certain quantities ( e.g. , [ some ] major projects .
+The optional tokens are marked with square brackets [ ] .
+In what follows , we show examples of considered optional token(s ) .
+Determiners .
+Unless a determiner is a part of a named entity ( e.g. , " The Times " ) , it is considered as optional .
+For instance , the following triples are considered to be semantically equivalent : Figure 9 : Data model structure used in the frontend • ( " Michael Jordan " ; " took " ; " the ball " ) • ( " Michael Jordan " ; " took " ; " ball " )
+The annotator , therefore , should annotate ( " Michael Jordan " ; " took " ; " [ the ] ball " ) , where the optional token is in square brackets .
+Titles .
+Titles of people are considered optional ; e.g. , ( " [ Prof. ] Michael Jordan " ; " lives in " ; " USA " ) .
+Adjectives .
+The annotator should label adjectives as optional if possible .
+For example , in the following triple , the adjective outstanding can be considered optional : ( " Albert Einstein " ; " is " ; " [ an ] [ outstanding ] scientist " ) .
+Note that the annotator should be careful not to label adjectives as optional if they are essential to the meaning of the triple .
+For instance , the adjective cold should not be labeled as optional in the triple ( " Berlin Wall " ; " is infamous symbol of " ; " [ the ] cold war " ) .
+Quantities .
+Certain quantities that modify a noun phrase can be considered as optional ; e.g. , Figure 10 : Code snippet showing how to add further language support 55  ( " Mitsubishi " ; " has control of " ; " [ some ] major projects " ) .
+Words indicating some tenses .
+The annotator can treat certain verbs that indicate tense as optional .
+For instance , the word have in ( " FDA " ; " [ has ] approved " ; " Proleukin " ) can be considered as optional , since both VPs " have approved " and " approved " contain the same core meaning .
+Verb phrases .
+It is allowed for the annotator to mark verb phrases as optional if possible ; e.g. ( " John " ; " [ continues to ] reside in " ; " Berlin " ) .
+Passive voice .
+When possible , if an extraction is in passive voice , the annotator should place its active voice equivalent into the appropriate fact synset .
+For instance , suppose we have the sentence " The ball was kicked by John . " .
+Then , the fact synset should contain the following triples : " was honored by [ the ] river being named after " ; " him " ) and ( " [ the ] river " ; " being named after " ; " him " ) .
+A.4.5
+Overly Complex Extractions
+The annotators should not manually extract overly specific triples , such that their arguments are complex clauses .
+For instance , for the input sentence " Vaccinations against other viral diseases followed , including the successful rabies vaccination by Louis Pasteur in 1886 . " , the following triple should not be extracted : ( " Vaccinations against other viral diseases " ; " followed " ; " including the successful rabies vaccination by Louis Pasteur in 1886 " ) because the object is a complex clause which does not describe a single concept precisely , but rather it is composed of several concepts .
+A.4.6 Conjunctions
+The annotator should not allow for conjunctive phrases to form an argument ( i.e. , subject or object ) .
+Such arguments should be placed into separate extractions ( and in separate fact synsets ) .
+Consider the sentence " Michael Jordan and Scottie Pippen played for Chicago Bulls . " .
+The annotator should manually extract the following triples : •
+( " [ The ] ball " ; " was kicked by " ; " John " ) • ( " John " ; " kicked " ; " [ The ] ball " )
+Note that the opposite direction is not allowed .
+If the sentence was " John kicked the ball .
+" , then the annotator is not allowed to manually extract the triple ( " [ The ] ball " ; " was kicked by " ; " John " ) because such extraction contains words that are not originally found in the input sentence ( " was " and " by " ) .
+These are so - called implicit extractions and we do not consider them ( details in Sec . A.4.7 ) ) .
+Attribution clauses .
+Extractions that indicate attribution of information should be placed in the same fact synset as the original information statement .
+For example , the core information of the sentence " Conspiracy theorists say that Barack Obama was born in Kenya . "
+is that Obama was born in Kenya .
+As indicated by Mausam et al. ( 2012 ) , it is important not to penalize OIE systems that would also extract the context about the attribution of such information .
+Therefore , the annotator should include the following triples into the same fact synset : ( " Barack Obama " ; " was born in " ; " Kenya " ) and ( " Conspiracy theorists " ; " say that " ; " Barack Obama was born in Kenya " ) .
+• ( " M. Jordan " ; " played for " ; " Chicago Bulls " ) • ( " S. Pippen " ; " played for " ; " Chicago Bulls " )
+The annotator should not , however , manually extract ( " Michael Jordan and Scottie Pippen " ; " played for " ; " Chicago Bulls " ) .
+A.4.7
+Implicit Extractions We focus on explicit extractions , which means that every word in the extracted triple must be present in the original input sentence .
+Therefore , implicit extractions — i.e. , extractions that contain inferred information which is not found in the sentence explicitly — are not considered .
+One example implicit extraction is ( " Michael Jordan " ; " be " ; " Prof. " ) from the input sentence " Prof. Michael Jordan lives in USA . " , where the triple infers that Michael Jordan is professor without being explicitly indicated in the sentence ( i.e. , the word " be " is not present in the input sentence , it is inferred ) .
+A.4.4 Incomplete Clauses
+The annotator should not manually extract incomplete clauses , i.e. , triples such that they lack crucial piece of information .
+Suppose there is the input sentence " He was honored by the river being named after him " .
+The following triple should not be manually extracted : ( " He " ; " was honored by " ; " [ the ] river " ) , but the following triples should be : ( " He " ; A.5 Annotation Guidelines ( Chinese )
+The annotator followed the same general principles as with the English annotation guidelines ( Sec . A.4 .
+Due to the difference of the languages , we slightly adapted the annotation guidelines for the Chinese 56  language .
+In what follows , we list those differences .
+A.5.1 Articles Chinese language does not contain articles ( i.e. , " a " , " an " , " the " ) .
+Therefore , in the manual translation of the sentences , there are no articles in the Chinese counterparts , which also results in labeling such words as optional ( for English , see Sec . A.4.3 ) .
+A.5.2 Prepositional Phrases within a Noun Phrase Certain noun phrases with nested prepositional phrase can not be translated directly into Chinese the same way as in English .
+For example , suppose we have the phrase " Prime Minister of Australia " .
+In Chinese , the literal translation of this phrase would be " Australia ’s Prime Minister " .
+For instance , in the English annotations the sentence " He was the Prime Minister of Australia " would have two fact synsets : f1 ( " He " ; " was [ the ] Pr . Min . of " ; " Australia " ) f2 ( " He " ; " was " ; " [
+the ] Pr . Min .
+[ of Australia ] " )
+This is because the the fact synset f1 relates the concepts " he " and " Australia " with the relation " was [ the ] Prime Minister of " , while the second fact synset relates the concepts " he " and " Prime Minister [ of Australia ] " with the relation " was " .
+In Chinese language , however , the construction of f1 would not be possible , because the phrase " Prime Mininister of Australia " can not be separated into " Prime Minister " and " Australia " .
+Therefore , the golden annotation for this particular example in Chinese would be only one fact synset : ( " He " ; " was " ; " [ Australia ’s ] Prime Minister " ) , which is equivalent with f2 .
+A.6 Manual Labeling of OIE Triples See Figure 11 for a screenshot from AnnIE ’s GUI , which shows the manual labeling process of OIE triples given an input sentence .
+57  Figure 11 : Manual labeling of OIE triples .
+The user selects tokens from the tokenized input sentence and places them into the correct slot : subject ( green ) , predicate ( yellow ) or object ( blue ) .
+Then , the user adds the extracted triple either to an active fact cluster ( i.e. , fact synset ) or to a new one .
+The user can also select which tokens are optional by clicking the " Optional " button on an active token selection .
+58  Input sentence ( EN ): He served as the first Prime Minister of Australia and became a founding justice of the High Court of Australia .
+f1 ( “ He ” ; “ served as ” ; “ [ the ] [ first ] Prime Minister [ of Australia ] ” ) ( “ He ” ; “ served ” ; “ as [ the ]
+[ first ] Prime Min .
+[ of Australia ] ” ) f2 ( “ He ” ; “ served as [ the ]
+[ first ] Prime Min . of ” ; “ Australia ” ) ( “ He ” ; “ served as [ the ] [ first ] Prime Min . ” ; “ of Australia ” ) f3
+( “ He ” ; “ became ” ; “ [ a ] [ founding ] justice ” ) ( “ He ” ; “ became ” ; “ [ a ] [ found . ]
+just .
+of [ the ] High Court [ of Aus . ] ) ”
+f4 ( “ He ” ; “ became [ a ] [ founding ] justice of ” ; “ [ the ] High Court [ of Australia ] ” ) ( “ He ” ; “ became [ a ] [ founding ] justice ” ; “ of [ the ] High Court [ of Australia ] ” ) f5 ( “ He ” ; “ bec .
+[ a ] [ found . ]
+just .
+of [ the ] H. C. of ” ; “ Australia ” ) ( “ He ” ; “ bec .
+[ a ] [ found . ]
+just .
+of [ the ] H. C. ” ; “ of Australia ” )
+Input sentence ( DE ): Er diente als erster Premierminister von Australien und wurde Gründungsrichter des obersten Gerichts von Australien .
+f1 ( “ Er ” ; “ diente als ” ; “ [ erster ] Premierminister [ von Australien ] ” ) ( “ Er ” ; “ diente ” ; “ als
+[ erster ]
+Premierminister [ von Australien ] ” ) f2 ( “ Er ” ; “ diente als [ erster ] Premiermin . von ” ; “ Australien ” ) ( “ Er ” ; “ diente als [ erster ] Premierminister ” ;
+“ von Australien ” ) f3 ( “ Er ” ; “ wurde ” ; “ Gründungs .
+[ des obersten Gerichts ]
+[ von Aus . ] ” )
+f4 ( “ Er ” ; “ wurde Gründungsrichter “ ; “ [ des ] obersten Gerichts [ von Australien ] “ ) f5 ( “ Er ” ; “ wurde Gründungs .
+[ des ] oberst .
+Ger . “ ; “ von Australien “ ) ( “ Er ” ; “ wurde Gründungs . …
+Gerichts von “ ; “ Australien “ ) Input sentence ( GL ): Serviu como primeiro primeiro ministro de Australia e converteuse nun xuíz fundador do Tribunal Superior de Xustiza de Australia .
+f1 ( / “ Serviu ” ; “ como [ primeiro ] primeiro ministro [ de Aus . ] ” ) ( / “ Serviu como ” ; “ [ primeiro ] primeiro ministro [ de Aus . ] ” )
+f2 ( / “ Serviu como prim .
+primeiro ministro ” ; “ de Australia ” ) ( / “ Serviu como prim .
+primeiro ministro ” ; “ Australia ” ) f3 ( / “ converteuse ” ; “ nun xuíz [ fund . ]
+do T. Sup . de Xus .
+[ de Aus . ] ” ) ( / “ converteuse nun ” ; “ xuíz [ fund . ]
+do Trib .
+Sup . de Xus .
+[ de Aus . ] ” )
+f4 ( / “ converteuse nun xuíz [ fundador ] do ” ; “ Tribunal Superior de Xustiza [ de Australia ] ” )
+f5 ( / “ con . nun xuíz [ fund . ]
+do T. S. de X. de ” ; “ Australia ” ) ( / “ con . nun xuíz [ fund . ]
+do T. S. de X. ” ; “ de Australia ” ) Figure 12 : Example sentence with five fact synsets ( f1 – f5 ) in several languages : English ( EN ) , German ( DE ) and Galician ( Galician ) .
+Square brackets ( [ ] ) are a shorthand notation for multiple extractions : triples both with and without the expression(s ) in the brackets are considered correct .
+For continuation of this figure , see Figure 13 , whereas the same input sentence and its corresponding OIE annotations are written in Chinese ( ZH ) , Japanese ( JA ) and Arabic ( AR ) .
+59  Input sentence ( ZH ): 他 曾 担
+任 澳 大 利 亚
+第
+一
+任
+总
+理 ，
+并 成 为 澳 大 利 亚
+高 等
+法 院 的 创 始法官 。 f1
+( “ 他 ” ; “ [ 曾 ] 担 任 ” ; “ [ 澳 大 利 亚 ] [ 第 一 任 ] 总 理 ] ” ) f2 ( “ 他 ” ; “ 成 为 ” ; “ [ 澳 大 利 亚 高 等
+法 院 的 ] [ 创 始 ] 法 官 ” ) Input sentence ( JA ): 彼はオーストラリアの初代首相を務め、オーストラリア高等裁判所の創設裁 判官になりました 。 f1 ( “ 彼 [ は ] ” ; ( “ 彼 [ は ] ” ; f2 ( “ 彼 [ は ] ” ; ( “ 彼 [ は ] ” ; f3 ( “ 彼 [ は ] ” ; ( “ 彼 [ は ] ” ; f4 ( “ 彼 [ は ] ” ; “ 務め ” ; “ を 務め ” ; “ の 初代 首相 [ を ] 務め ” ; “ 初代 首相 [ を ] 務め ” ; “ なり [ まし ] [ た ] ” ; ” なり [ まし ]
+[ た ] ” ; “ [ オーストラリア ] [ の ] [ 初代 ] 首相 を ” ) “ [ オーストラリア ]
+[ の ] [ 初代 ] 首相 ” ) “ オーストラリア ” ) “ オーストラリア の ” ) “ [ 創設 ] 裁判 官 に ” ) " [ オーストラリア ] 高等 裁判 所 の
+[ 創設 ] 裁判 官 に “ ) “ [ オーストラリア ] 高等 裁判 所 “ ) “ の [ 創設 ] [ 裁判 ] 官
+[ に ] なり まし た “ ; ( “ 彼 [ は ] ” ; “ [ 創設 ] [ 裁判 ] 官
+[ に ] なり ま “ [ オーストラリア ] 高等 裁判 所 の “ ) し た “ ; f5 ( “ 彼 は ” ; “ 高等 裁判 所 の [ 創設 ] 裁判 “ オーストラリア “ ) 官
+[ に ] なり
+[ まし ] [ た ] “ ‫قاضيا وأصبح ر‬ ‫
+ر‬. ً
+ً Input sentence ( AR ): ‫ألستاليا وزراء رئيس أول منصب شغل
+هو‬ ‫مؤسسا‬ ‫أستاليا في العليا
+للمحكمة‬ ‫ر‬ f1
+( ” ‫;”هو‬ ” ‫;”غل‬ ” [ ‫)”]ألستاليا [ وزراء رئيس ] أول منصب‬ ‫ر‬ f2 ( ” ‫;”هو‬ ” ‫;”وزراء رئيس ] أول منصب [ غل‬ “ ‫)”أستاليا‬ ‫ر‬ ً
+ً f3 ( ” ‫;”هو‬ ” ‫”أصبح‬ ” ‫]مؤسسا [ اضيا‬ ‫)”]أستاليا في [ العليا للمحكمة‬ ً
+ً
+( ” ‫;”هو‬ ” ‫”أصبح‬ ” ‫)”]مؤسسا [ اضيا‬ ‫ر‬
+ً
+ً
+f4 ( ” ‫;”هو‬ ” ‫قاضيا وأصبح‬
+[ ‫”]مؤسسا‬ ” ‫)”]أستاليا في [ العليا لمحكمة‬ ‫ر‬
+ً
+ً f5 ( ” ‫;”هو‬ ” ‫للمحكمة ]
+مؤسسا [ قاضيا أصبح‬ “ [ ‫)“أستاليا ] في‬ ‫;”العليا‬
+Figure 13 : Example sentence and its corresponding OIE annotations in Chinese ( ZH ) , Japanese ( JA ) and Arabic ( AR ) .
+This figure is continuation of Figure 12 .
+60 

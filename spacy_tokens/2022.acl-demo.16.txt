@@ -1,0 +1,328 @@
+: A Knowledge Graph Embedding Toolkit and Benchmark for Representing Multi - source and Heterogeneous Knowledge Zhuoran Jin∗1,2 , Tianyi Men∗1,2 , Hongbang Yuan∗1,2 , Zhitao He1,2 , Dianbo Sui1,2 , Chenhao Wang1,2 , Zhipeng Xue1 , Yubo Chen1,2 , Jun Zhao1,2 1 National Laboratory of Pattern Recognition , Institute of Automation , CAS , Beijing , China 2 School of Artificial Intelligence , University of Chinese Academy of Sciences , Beijing , China { zhuoran.jin , dianbo.sui , yubo.chen , jzhao}@nlpr.ia.ac.cn { mentianyi2022 , yuanhongbang2022 , hezhitao2021}@ia.ac.cn
+Abstract These authors contribute equally to this work .
+http://cognlp.com/cogkge/ 2 https://github.com/jinzhuoran/CogKGE/ 3 https://youtu.be/BiA2Rm9JYKs/ Relation Rocket Description : … rocket is used for flying to the moon ; rocket is capable of taking you into space ; rocket is related to oxidizer …
+Commonsense Knowledge From ConcepNet World Knowledge ( Entity - centric ) From Wikidata Participate in Relate Nell Armstrong Apollo 11 Moon Landing Description : … Astronauts Neil Armstrong and Buzz Aldrin landed their Apollo Lunar Module ( LM ) on July 20 , 1969 , and walked on … Type : Space Event World Knowledge ( Event - centric ) From Wikidata Launched by Description : …
+American astronaut and aeronautical engineer , and the first human being to walk on the Moon … Type : Astronaut / Person Participate in [ 1962 - 1971 ]
+World Knowledge ( Entity - centric ) From Wikidata [ 1961 - 1972 ] Work at Relate Participation NASA Description : … NASA 's science is focused on better understanding Earth through the Earth Observing System , advancing heliophysics … Type : Organization World Knowledge ( Entity - centric ) From Wikidata Defination : … An Event with multiple Participants takes … LexUnit : concerned.a , engage.v , embroiled.a , , entanglement.n … Frame elements : Event , Place , Participant_1 , Participant_2 ...
+Linguistic Knowledge
+From FrameNet Figure 1 : An example of a multi - source heterogeneous KG .
+Grey , blue , green and purple denote entity - centric world knowledge , event - centric world knowledge , commonsense knowledge and linguistic knowledge , respectively .
+The dotted boxes show additional information .
+In recent years , knowledge graphs ( KGs ) have experienced rapid development .
+A large number of KGs , such as FrameNet ( Baker et al. , 1998 ) , Wikidata ( Vrandečić and Krötzsch , 2014 ) , DBpedia ( Lehmann et al. , 2015 ) and ConceptNet ( Speer et al. , 2017 ) , have been built and successfully applied to many real - world applications .
+Most 1 Additional Information Commonsense Knowledge Description : … American former astronaut , engineer and fighter pilot .
+He is the last surviving crew member of Apollo 11 … Type : Astronaut / Person Introduction *
+Linguistic Knowledge Event - centric Knowledge Buzz Aldrin
+In this paper , we propose , a knowledge graph embedding ( KGE ) toolkit , which aims to represent the multi - source and heterogeneous knowledge .
+For multi - source knowledge , unlike existing methods that mainly focus on entity - centric world knowledge , CogKGE also supports the representations of eventcentric world knowledge , commonsense knowledge and linguistic knowledge .
+For heterogeneous knowledge , besides structured triple facts , CogKGE leverages additional unstructured information , such as text descriptions , node types and temporal information , to enhance the meaning of embeddings .
+Moreover , CogKGE aims to provide a unified programming framework for KGE tasks and a series of knowledge representations for downstream tasks .
+As a research framework , CogKGE consists of five parts , including core , data , model , knowledge and adapter module .
+As a knowledge discovery toolkit , CogKGE provides pretrained embedders to discover new facts , cluster entities and check facts .
+Furthermore , we construct two new benchmark datasets for further research on multi - source heterogeneous KGE tasks : EventKG240 K and CogNet360K. We also release an online system 1 to discover knowledge visually .
+Source code , datasets and pre - trained embeddings are publicly available at GitHub 2 , with a short instruction video 3 .
+1 Entity - centric Knowledge KGs are originally organized in the form of triples ( h , r , t ) , where h and t indicate head and tail entities , and r indicates the relation between h and t.
+However , a KG is a symbolic system that can not be directly applied to large - scale deep learning frameworks .
+To this end , a series of knowledge graph embedding ( KGE ) models have been proposed to represent the entities and relations into continuous spaces ( Bordes et al. , 2013 ; Wang et al. , 2014 ; Lin et al. , 2015 ; Sun et al. , 2018 ; Abboud et al. , 2020 ) .
+To facilitate the development of KGE models , some remarkable KGE toolkits , such as OpenKE ( Han et al. , 2018 ) , Graphvite ( Zhu et al. , 2019 ) , LibKGE ( Broscheit et al. , 2020 ) , PyKEEN ( Ali et al. , 2021 ) and Pykg2vec ( Yu et al. , 2021 ) have been released , providing easy - to - use frameworks for a series of KGE models .
+However , most of them perform the embedding task solely based on entityrelated triple facts , so they are still limited to two critical challenges in practical applications : multisource challenge and heterogeneous challenge .
+As to the multi - source challenge , real - world 166 Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics System Demonstrations , pages 166 - 173 May 22 - 27 , 2022 © 2022 Association for Computational Linguistics  KGs involve not only world knowledge ( including entity - centric knowledge and event - centric knowledge ) , but also linguistic knowledge and commonsense knowledge .
+In various practical applications , we need to use multi - source knowledge simultaneously .
+For example , as shown in Figure 1 , to understand an article about “ Neil Armstrong ” , we need ( 1 ) entity - centric world knowledge , e.g. , “ Neil Armstrong worked at NASA ” from Wikidata ; ( 2 ) eventcentric world knowledge , e.g. , “ Neil Armstrong is a participator of the Apollo 11 Moon Landing ” from Wikidata ; ( 3 ) linguistic knowledge , e.g. , the linguistic frame of “ Participation ” from FrameNet ; ( 4 ) commonsense knowledge , e.g. , “ rocket is used for flying to the moon ” from ConceptNet .
+However , most existing toolkits only focus on representing world knowledge , especially entity - centric knowledge , while ignoring other knowledge , like commonsense knowledge and linguistic knowledge .
+Therefore , developing a toolkit that can represent multi - source knowledge is essential .
+As to the heterogeneous challenge , real - world KGs involve not only triple facts , but also additional information , such as text descriptions , node types and temporal information .
+In many practical applications , we should use these heterogeneous knowledge together .
+Likewise , as shown in Figure 1 , to understand an article about “ Neil Armstrong ” , besides structured triple facts , we also need ( 1 ) text descriptions , e.g. , “ Neil Armstrong was the first human being to walk on the Moon ” ; ( 2 ) node types , e.g. , “ Neil Armstrong is an astronaut ” ; ( 3 ) temporal information , e.g. , “ Nell Armstrong participated in Apollo 11 Moon Landing from 1962 to 1971 ” .
+All these heterogeneous knowledge can be used for obtaining the embeddings , but conventional KGE models can not take full advantage of the additional information mentioned above .
+Therefore , it is highly desirable to have a toolkit that can bridge these heterogeneous knowledge by plug - and - play knowledge adapters .
+To solve the above two problems , we propose , a knowledge graph embedding toolkit that aims to represent multi - source and heterogeneous knowledge .
+The toolkit consists of five parts , including core module , data module , model module , adapter module and knowledge module .
+CogKGE currently supports 17 models , 11 datasets , five evaluation metrics , four knowledge adapters , four loss functions , three samplers and three builtin data containers .
+Besides , we also construct two large - scale benchmark datasets to promote the research on KGE .
+In summary , the main features and contributions are as follows : • Multi - source and heterogeneous knowledge representation .
+CogKGE explores the unified representation of knowledge from diverse sources .
+Moreover , our toolkit not only contains the triple fact - based embedding models , but also supports the fusion representation of additional information , including text descriptions , node types and temporal information .
+• Comprehensive models and benchmark datasets .
+CogKGE has implemented 17 classic KGE models of four categories , including translation distance models , semantic matching models , graph neural network - based models and transformer - based models .
+Besides nine built - in public datasets , we also release two new large benchmark datasets for further evaluating KGE methods , called EventKG240 K and CogNet360K. • Extensible and modularized framework .
+CogKGE provides a programming framework for KGE tasks .
+Based on the extensible architecture , CogKGE can meet the requirements of module extension and secondary development , and pre - trained knowledge embeddings can be directly applied to downstream tasks .
+• Open source and online demo .
+Besides the toolkit , we also release an online CogKGE demo to discover knowledge visually .
+Source code , datasets and pre - trained embeddings are publicly available at GitHub .
+2 System Architecture
+The overall system architecture of CogKGE is presented in Figure 2 .
+The top part is composed of the core module and data module .
+The former is the basis of the toolkit , while the latter provides fundamental data containers , loaders and processors .
+The bottom part is built upon the top part , the model module contains lots of built - in models , the knowledge module integrates multi - source and heterogeneous knowledge , and the adapter module acts as a bridge between the two .
+In the following , we will cover these five modules in detail .
+2.1 Core Module In the core module , we develop an extensible framework and various ready - to - use components .
+167  Core Data Trainer Sampler Loss Predictor Metric Configuration
+BernNegative Sampler MarginLoss Visualization Hits@1/3/10 Multi - GPUs Adversarial Sampler NegLog LikehoodLoss Knowledge Discovery MR / MRR Model Translation Distance RESCAL ComplEx BoxE
+PairRE SimplE TuckER CompGCN Text Descriptions Semantic Matching RotatE R - GCN Processor LUT Vocabulary Datable Dataset Knowledge Adapter TransE GNN - based Loader Node Types Transformer - based KEPLER HittER World Wikdata EventKG Commonsense ConceptNet ATOMIC Temporal Information Linguistic FrameNet WordNet Graph Structure Multi - source heterogeneous CogNet Figure 2 : The main architecture of CogKGE .
+Trainer , Evaluator and Predictor .
+Since training , evaluation , and prediction are the core processes in the deep learning pipeline , we design Trainer class , Evaluator class and Predictor class to implement them , respectively .
+To improve the efficiency of our toolkit , we also involve some functions to support multiGPUs training , breakpoints resume , logs record and result visualization as shown in Appendix A. Loss and Sampler .
+All models in CogKGE are trained by minimizing MarginLoss function or NegLogLikehoodLoss function .
+Both of these loss functions need to construct false triples as negative samples .
+We encapsulate the efficient process of constructing negative samples in Sampler class , including UniSampler class , BernSampler class and AdversarialSampler class .
+Metric .
+KGE models are usually evaluated on link prediction , which aims to predict the missing entities in triples ( ? , r , t ) or ( h , r , ? ) .
+In CogKGE , the Metric class computes the ratio of answers ranked top - k ( Hits@1/3/10 ) , the mean rank of the answers ( MR ) and the mean reciprocal rank of the answers ( MRR ) , both raw and filtered results are available .
+to indexes .
+To improve reusability , CogKGE includes built - in Loader and Processor class for many benchmarking datasets and is compatible with multi - source heterogeneous KGs with additional information .
+2.3 Model Module BaseModel class is the base class of all models in CogKGE .
+BaseModel class organizes code into three basic sections : ( 1 ) forward function for training , ( 2 ) embedding function for getting the embedding of entities and relations and ( 3 ) scoring function for computing the score of triples .
+The model module consists of four parts , which are : translation distance models , semantic matching models , graph neural network - based models and transformer - based models .
+Translation Distance Models .
+The translation distance models use distance - based measures to compute the similarity score for a pair of entities and their relationships .
+In CogKGE , the similarity score function of translation distance models is generally defined as : 1/2 fr ( h , t ) =
+∥gh ( h ) + r − gt ( t)∥ℓ1 /ℓ2 , 2.2 Data Module A primary design principle of CogKGE is to support unified KGE tasks .
+For this purpose , the data module is based on easy - to - use data containers , such as LUT class for looking up items in table form , Vocabulary class for converting labels ( 1 ) where h , r , t are the embedding representations of h , r , t , gh ( · ) and gt ( · ) are the transformation functions .
+The translation - based models aim to find a vector representation of entities with relation to the translation of the entities .
+In CogKGE , we implement several translational distance models , including TransE ( Bordes et al. , 2013 ) , TransH ( Wang et al. , 2014 ) , TransR
+( Lin et al. , 2015 ) , TransD ( Ji 168  et al. , 2015 ) , TransA ( Xiao et al. , 2015 ) , RotatE ( Sun et al. , 2018 ) , BoxE
+( Abboud et al. , 2020 ) and PairRE ( Chao et al. , 2020 ) .
+Semantic Matching Models .
+Compared with the distance - based score function of translation distance models , semantic matching models use the similarity - based score function .
+They measure the plausibility of facts by matching latent semantics of entities and relations embodied in their vector space representations .
+RESCAL ( Nickel et al. , 2011 ) , DistMult ( Yang et al. , 2015 ) , ComplEx ( Trouillon et al. , 2016 ) , SimplE ( Kazemi and Poole , 2018 ) and TuckER ( Balažević et al. , 2019 ) have been built into CogKGE .
+on Wikidata and event - centric knowledge representation based on EventKG ( Gottschalk and Demidova , 2018 ) .
+World knowledge representations have been widely used in knowledge - enhanced pretrained language models , entity disambiguation and event extraction .
+Commonsense Knowledge .
+Commonsense knowledge tries to capture implicit general facts and regular patterns in our daily life .
+Nodes in commonsense KG are semantically rich natural language phrases rather than entities .
+CogKGE supports the commonsense knowledge representation of ConceptNet , which can be helpful for commonsense completion and reasoning .
+Graph Neural Network - based Models .
+Graph neural network ( GNN ) has recently been shown to be quite successful in modelling graph - structured data .
+Considering that KG itself happens to be a kind of graph - structured data , GNN can integrate the topological structure and node feature , then provides a more refined vector representation .
+We implement R - GCN ( Schlichtkrull et al. , 2018 ) and CompGCN ( Vashishth et al. , 2019 ) to represent the multi - relational data .
+Linguistic Knowledge .
+Linguistic knowledge includes considerable information about lexical , conceptual and predicate argument semantics .
+For example , “ participation ” has hyponymy relation to “ engagement ” in WordNet , while “ take part ” can evoke the “ Participation ” frame in FrameNet .
+In CogKGE , the knowledge representation of FrameNet can be applied for downstream tasks , such as word sense disambiguation and machine reading comprehension .
+Transformer - based Models .
+Transformer has been widely used in pre - trained language models , and its deep network architecture can learn contextual representations of entities and relations in a KG jointly by aggregating information from graph neighbourhoods .
+Besides , transformer - based models can also utilize the text descriptions in KGs , encoding the texts and facts into a unified semantic space .
+We have implemented KEPLER ( Wang et al. , 2021b ) and HittER ( Chen et al. , 2021 ) .
+2.5 2.4 Knowledge Module The knowledge module mainly integrates three kinds of knowledge representation , namely world , commonsense and linguistic knowledge .
+World Knowledge .
+Encyclopedia KGs such as Freebase , DBpedia and Wikidata mainly focus on explicit world knowledge , containing facts about specific instances , e.g. , ( Neil Armstrong , Work at , NASA ) .
+Besides entity - centric knowledge , eventcentric knowledge is also an essential kind of knowledge , which conveys dynamic and procedural knowledge , e.g. , ( Neil Armstrong , Participate in , Apollo 11 Moon Landing ) .
+In CogKGE , we implement entity - centric knowledge representation based Adapter Module Almost all of the models in Section 2.3 embed KGs to a specific feature space only based on the triple facts ( h , r , t ) .
+In practice , as shown in Section 2.4 , multi - source and heterogeneous knowledge representation is more realistic and valuable .
+There is a lot of additional information in KGs that can further enhance and refine the knowledge representation .
+Inspired by the adapter pattern in the design patterns , we leverage plug - and - play knowledge adapters to build a bridge between KGE models and multi - source heterogeneous data .
+Text Descriptions Adapter .
+As shown in Figure 1 , there are text descriptions of entities in KGs , containing abundant semantic information about them .
+The challenge of KGE with text description is to embed both structured fact knowledge and unstructured textual information in the same space .
+According to KEPLER ( Wang et al. , 2021b ) , we adopt RoBERTa ( Liu et al. , 2019 ) as the encoder to generate the entity embeddings based on text descriptions .
+For a triple ( h , r , t ) , we have : 169 h = Encoder(hd ) t = Encoder(td ) , ( 2 )  where hd and td are the text descriptions for h and t. Users can replace the traditional embedding matrixes with the text descriptions adapter without modifying scoring function of models .
+Models with the text description adapters can generate embeddings from their descriptions for those entities invisible during the training stage .
+Figure 3 : An example of pre - trained embedder .
+Node Types Adapter .
+In most KGs , nodes are represented with hierarchical types or categories .
+For example , “ Neil Armstrong ” belongs to “ Astronaut ” and “ Person ” category .
+To implement the node types adapter , we use type - specific entity projections based on TKRL ( Xie et al. , 2016 ) , which is defined as : gh ( h ) =
+Mch h gt ( t ) =
+Mct t , ( 3 ) where Mch and Mct are the projection matrixes of h and t belonging to category c.
+Temporal Information Adapter .
+KG facts are usually time - sensitive , different events and actions cause entities and relations to change over time .
+For example , Figure 1 illustrates “ Nell Armstrong ” paticipated in “ Apollo 11 Moon Landing ” from 1962 to 1971 .
+A fact with temporal information in KGs is represented as a quadruple ( h , r , t , [ τb , τe ] ) , where τb and τe respectively denote the start and end time of the fact .
+We implement diachronic embedding ( DE ) ( Goel et al. , 2020 ) as the temporal information adapter in CogKGE .
+3 System Usage Our goal of designing CogKGE is to provide a unified research framework for KGE tasks and pretrained knowledge representations for downstream tasks .
+In this section , we show a detailed guideline on how to use our toolkit .
+3.1 Pre - trained Embedder for Knowledge Discovery CogKGE provides a series of pre - trained knowledge representations , such as EventKG , CogNet ( Wang et al. , 2021a ) and other KGs .
+Predictor class serves as the pre - trained embedder , whose model and dataset can be selected by users .
+As shown in Figure 3 , Predictor class implements the following functions : similar nodes query , head query according to tail and relation , relation query according to head and tail , etc .
+Pre - trained embedders can be applicable for knowledge discovery .
+Figure 4 : An example of programming framework .
+3.2 Programming Framework for Training Models As a unified programming framework , CogKGE supports researchers to use various off - the - shelf components to implement new models quickly .
+Figure 4 shows the sample code of training models .
+To do this , users need to use Loader class to load the lookup tables and process datasets by Processor class .
+Then , Model , Loss , Metric , Optimizer , Sampler class should be initialized before added to Trainer class .
+And finally , Trainer and Evaluator class can automatically train and validate the model .
+3.3 Online System for Visualization
+In addition to this toolkit , we also release an online system as shown in Figure 5 .
+We implement highperformance KGE models for large - scale KGs and deploy pre - trained knowledge embedders for online access .
+The online system can be directly used for querying nodes and relations in various forms , and in the meantime , dimensionality reduction and visualization of nodes are supported .
+4 Evaluation Benchmark To evaluate the KGE models on large - scale multisource heterogeneous KGs , we construct two new benchmark datasets : EventKG240 K and 170  Model RESCAL TransE TransH DistMult ComplEx
+RotatE SimplE BoxE PairRE Hits@1 6.3 6.2 6.7 7.1 8.4 8.3 9.2 8.3 7.7 EventKG240 K
+Hits@3 Hits@10 MR MRR Hits@1 14.3 16.1 15.9 15.1 19.7 22.3 20.6 17.5 20.3 13.7 15.1 15.0 14.8 18.4 19.8 19.2 16.5 17.7 1.0 0.7 0.6 1.4 0.7 1.9 1.3 1.4 1.3 29.4 34.7 32.5 31.2 41.1 45.6 42.8 34.5 39.5 1644.8
+1019.1 1109.4 1113.6 1513.5 717.3 2354.5 1871.8 1051.0 CogNet360 K
+Hits@3 Hits@10 2.6 2.8 2.6 3.7 2.2 4.7 3.3 3.8 4.1 7.7 8.6 8.3 10.4 7.4 12.2 9.0 10.1 11.3 MR MRR
+1734.9 1167.0 2077.9 923.9 1167.2 230.0 2973.3 355.5 810.6 4.0 4.1 4.0 5.1 3.8 6.0 4.7 5.1 5.4 Table 1 : Link prediction results on EventKG240 K and CogNet360 K ( % except MR ) .
+Under the raw evaluation setting , we do not remove the corrupted triples before ranking .
+The embedding dimension is 50 .
+sort frame instances by the minimum occurrences of their connected nodes .
+After the sorted frame instances , we filter the triple facts according to the preset frame categories .
+The final dataset contains 360,637 nodes , 45 relations and 1,470,488 triples .
+4.3 Figure 5 : An example of online system .
+CogNet360K.
+In this section , we introduce our datasets and conduct evaluations for classic models included in CogKGE .
+4.1 EventKG240 K EventKG is an event - centric temporal knowledge graph .
+To our best knowledge , EventKG240 K is the first event - centric KGE dataset .
+We use EventKG V3.0 data to construct the dataset .
+First , we filter entities and events based on their degrees .
+Then , we select the triple facts when both nodes ’ degrees are greater than 10 .
+At last , we add text descriptions and node types for nodes and translate triples to quadruples by temporal information .
+The whole dataset contains 238,911 nodes , 822 relations and 2,333,986 triples .
+4.2 CogNet360 K CogNet is a multi - source heterogeneous KG dedicated to integrating linguistic , world and commonsense knowledge .
+To build a subset , we count the number of occurrences for each node .
+Then , we Performance To assess the challenges of EventKG240 K and CogNet360 K , we benchmark several popular KGE models on our dataset and select Hits@1/3/10 , MR and MRR as the metrics .
+Table 1 shows the performance of KGE models on EventKG240 K and CogNet360 K , and the evaluation result shows that both datasets are more challenging due to their multi - source and heterogeneous features .
+For EventKG240 K , traditional KGE models can not distinguish events and entities well .
+For CogNet360 K , it is difficult for vanilla KGE methods to represent multiple kinds of knowledge uniformly .
+The results advocate for more efforts towards large - scale multi - source heterogeneous KGE tasks .
+5 Conclusion In this paper , we propose CogKGE , a knowledge graph embedding toolkit and benchmark for representing multi - source and heterogeneous knowledge .
+For multi - source knowledge , CogKGE explores the unified representation of world , commonsense and linguistic knowledge .
+For heterogeneous knowledge , CogKGE incorporates the structured and unstructured knowledge to enhance the meaning of embeddings .
+So far , we have implemented 17 classic KGE models .
+Besides nine public datasets , we also release two new benchmark datasets for further evaluating KGE models .
+Moreover , owing to the extensible and modularized architecture , 171  CogKGE is not only a KGE research framework , but also a knowledge discovery library .
+Besides the toolkit , we also release an online system to discover knowledge visually .
+In the future , more models , benchmark datasets , and knowledge adapters will be incorporated into CogKGE .
+Simon Gottschalk and Elena Demidova . 2018 .
+Eventkg : A multilingual event - centric temporal knowledge graph .
+In Proc .
+of ESWC .
+Xu Han , Shulin Cao , Xin Lv , Yankai Lin , Zhiyuan Liu , Maosong Sun , and Juanzi Li .
+2018 .
+Openke : An open toolkit for knowledge embedding .
+In Proc .
+of EMNLP : System Demonstrations .
+Acknowledgements We thank the anonymous reviewers for their constructive comments .
+This work is supported by the National Key Research and Development Program of China ( No.2020AAA0106400 ) , the National Natural Science Foundation of China ( No.61976211 and No.62176257 ) .
+References Ralph Abboud , Ismail Ceylan , Thomas Lukasiewicz , and Tommaso Salvatori . 2020 .
+Boxe : A box embedding model for knowledge base completion .
+Proc . of NIPS .
+Mehdi Ali , Max Berrendorf , Charles Tapley Hoyt , Laurent Vermue , Sahand Sharifzadeh , Volker Tresp , and Jens Lehmann . 2021 .
+Pykeen 1.0 : A python library for training and evaluating knowledge graph embeddings .
+Journal of Machine Learning Research .
+Collin F Baker , Charles J Fillmore , and John B Lowe . 1998 .
+The berkeley framenet project .
+In Proc .
+of ACL
+.
+Ivana Balažević , Carl Allen , and Timothy Hospedales .
+2019 .
+Tucker : Tensor factorization for knowledge graph completion .
+In Proc .
+of EMNLP .
+Antoine Bordes , Nicolas Usunier , Alberto GarciaDuran , Jason Weston , and Oksana Yakhnenko .
+2013 .
+Translating embeddings for modeling multirelational data .
+In Proc .
+of NIPS
+.
+Samuel Broscheit , Daniel Ruffinelli , Adrian Kochsiek , Patrick Betz , and Rainer Gemulla . 2020 .
+Libkge : A knowledge graph embedding library for reproducible research .
+In Proc .
+of EMNLP : System Demonstrations .
+Linlin Chao , Jianshan He , Taifeng Wang , and Wei Chu . 2020 .
+Pairre : Knowledge graph embeddings via paired relation vectors .
+ArXiv:2011.03798 .
+Sanxing Chen , Xiaodong Liu , Jianfeng Gao , Jian Jiao , Ruofei Zhang , and Yangfeng Ji . 2021 .
+HittER :
+Hierarchical transformers for knowledge graph embeddings .
+In Proc .
+of EMNLP .
+Rishab Goel , Seyed Mehran Kazemi , Marcus Brubaker , and Pascal Poupart . 2020 .
+Diachronic embedding for temporal knowledge graph completion .
+In Proc .
+of AAAI .
+Guoliang Ji , Shizhu He , Liheng Xu , Kang Liu , and Jun Zhao .
+2015 .
+Knowledge graph embedding via dynamic mapping matrix .
+In Proc .
+of ACL
+.
+Seyed Mehran Kazemi and David Poole . 2018 .
+Simple embedding for link prediction in knowledge graphs .
+In Proc .
+of NIPS
+.
+Jens Lehmann , Robert Isele , Max Jakob , Anja Jentzsch , Dimitris Kontokostas , Pablo N Mendes , Sebastian Hellmann , Mohamed Morsey , Patrick Van Kleef , Sören Auer , et al. 2015 .
+Dbpedia – a large - scale , multilingual knowledge base extracted from wikipedia .
+Semantic web .
+Yankai Lin , Zhiyuan Liu , Maosong Sun , Yang Liu , and Xuan Zhu . 2015 .
+Learning entity and relation embeddings for knowledge graph completion .
+In Proc .
+of AAAI .
+Yinhan Liu , Myle Ott , Naman Goyal , Jingfei Du , Mandar Joshi , Danqi Chen , Omer Levy , Mike Lewis , Luke Zettlemoyer , and Veselin Stoyanov . 2019 .
+Roberta : A robustly optimized bert pretraining approach .
+ArXiv:1907.11692 .
+Maximilian Nickel , Volker Tresp , and Hans - Peter Kriegel . 2011 .
+A three - way model for collective learning on multi - relational data .
+In Proc .
+of ICML .
+Michael Sejr Schlichtkrull , Thomas N Kipf , Peter Bloem , Rianne van den Berg , Ivan Titov , and Max Welling . 2018 .
+Modeling relational data with graph convolutional networks .
+In Proc .
+of ESWC
+.
+Robyn Speer , Joshua Chin , and Catherine Havasi .
+2017 .
+Conceptnet 5.5 : An open multilingual graph of general knowledge .
+In Proc .
+of AAAI .
+Zhiqing Sun , Zhi - Hong Deng , Jian - Yun Nie , and Jian Tang . 2018 .
+Rotate : Knowledge graph embedding by relational rotation in complex space .
+In Proc .
+of ICLR .
+Théo Trouillon , Johannes Welbl , Sebastian Riedel , Éric Gaussier , and Guillaume Bouchard . 2016 .
+Complex embeddings for simple link prediction .
+In Proc .
+of ICML
+.
+Shikhar Vashishth , Soumya Sanyal , Vikram Nitin , and Partha Talukdar . 2019 .
+Composition - based multirelational graph convolutional networks .
+In Proc .
+of ICLR .
+Denny Vrandečić and Markus Krötzsch . 2014 .
+Wikidata : a free collaborative knowledgebase .
+Communications of the ACM . 172  Chenhao Wang , Yubo Chen , Zhipeng Xue , Yang Zhou , and Jun Zhao .
+2021a .
+Cognet :
+Bridging linguistic knowledge , world knowledge and commonsense knowledge .
+In Proc .
+of AAAI .
+B Type Nodes Relations Event - Event Event - Entity Entity - Entity
+All Triples Xiaozhi Wang , Tianyu Gao , Zhaocheng Zhu , Zhengyan Zhang , Zhiyuan Liu , Juanzi Li , and Jian Tang .
+2021b .
+Kepler : A unified model for knowledge embedding and pre - trained language representation .
+Transactions of the Association for Computational Linguistics .
+Zhen Wang , Jianwen Zhang , Jianlin Feng , and Zheng Chen . 2014 .
+Knowledge graph embedding by translating on hyperplanes .
+In Proc .
+of AAAI .
+Han Xiao , Minlie Huang , Yu Hao , and Xiaoyan Zhu . 2015 .
+Transa : An adaptive approach for knowledge graph embedding .
+ArXiv:1509.05490 .
+Ruobing Xie , Zhiyuan Liu , and Maosong Sun . 2016 .
+Representation learning of knowledge graphs with hierarchical types .
+In Proc . of IJCAI .
+Bishan Yang , Wen - tau Yih , Xiaodong He , Jianfeng Gao , and Li Deng . 2015 .
+Embedding entities and relations for learning and inference in knowledge bases .
+In Proc .
+of ICLR .
+Train 238,911 822 219,128 1,121,106 953,774 2,294,008 Validation 28,844 289 1,389 9,715 8,874 19,978 Test 28,848 301 1,427 9,731 8,842 20,000 Table 2 : The statistics of EventKG240K. In this section , we provide more details of our EventKG240K. As shown in Table 2 , EventKG240 K contains various event - centirc knowledge , especially event - event triples and event - entity triples .
+C CogNet360 K Statistics
+In this section , we provide more details of our CogNet360K. As shown in Table 3 , CogNet360 K contains rich multi - source and heterogeneous knowledge .
+Shih - Yuan Yu , Sujit Rokka Chhetri , Arquimedes Canedo , Palash Goyal , and Mohammad Abdullah Al Faruque . 2021 .
+Pykg2vec : A python library for knowledge graph embedding .
+Journal of Machine Learning Research .
+Zhaocheng Zhu , Shizhen Xu , Jian Tang , and Meng Qu .
+2019 .
+Graphvite : A high - performance cpu - gpu hybrid system for node embedding .
+In Proc .
+of WWW .
+A EventKG240 K Statistics Visualization in CogKGE As shown in Figure 6 , CogKGE plots training loss and commonly metrics by Tensorboard .
+To visualize the high - dimensional embeddings , we use t - SNE dimensionality reduction .
+Type Nodes Frames Mini_frames Micro_frames Synset_frames Frame_elements Fers Fis Entitys Frame - Frame Fe - Frame Fe - Fe Fer - Fer Fer - Micro_frame Micro_frame - Micro_frame Micro_frame - Frame Mini_frame - Frame Mini_frame - Micro_frame Mini_frame - Synset_frame Synset_frame - Frame Synset_frame - Synset_frame Synset_frame - Micro_frame Fi - Fer Fi - Entity Fi - Micro_frame
+All Triples Train 360,637 1,273 7,673 12,188 5,271 5,642 1,419 254,384 72,787 5,762 5,294 14,819 6,440 5,375 63,202 24,075 15,346 47,548 21,084 23,133 62,215 129,773 220,157 488,789 255,035 1,388,047 Validation 12,989 253 0 1,556 1,189 256 424 5,611 3,700 250 0 230 368 462 9,108 0 0 0 0 78 8,267 16,283 16 6,047 112 41,221 Table 3 : The statistics of CogNet360K. ( a ) Training Plot .
+( b ) Embedding Plot .
+Figure 6 : Examples of visualization in CogKGE .
+173 Test 13,044 258 0 1,558 1,179 246 420 5,655 3,728 247 0 225 386 444 9,088 0 0 0 0 77 8,316 16,224 13 6,086 114 41,220 

@@ -1,0 +1,594 @@
+UNIREX : A Unified Learning Framework for Language Model
+Rationale
+Extraction Aaron Chan1∗ , Maziar Sanjabi2 , Lambert Mathias2 , Liang Tan2 , Shaoliang Nie2 , Xiaochang Peng2 , Xiang Ren1 , Hamed Firooz2 1 University of Southern California , 2 Meta AI { chanaaro,xiangren}@usc.edu , { maziars,mathiasl,liangtan,snie,xiaochang,mhfirooz}@fb.com
+Abstract An extractive rationale explains a language model ’s ( LM ’s ) prediction on a given task instance by highlighting the text inputs that most influenced the prediction .
+Ideally , rationale extraction should be faithful ( reflective of LM ’s actual behavior ) and plausible ( convincing to humans ) , without compromising the LM ’s ( i.e. , task model ’s ) task performance .
+Although attribution algorithms and select - predict pipelines are commonly used in rationale extraction , they both rely on certain heuristics that hinder them from satisfying all three desiderata .
+In light of this , we propose UNIREX , a flexible learning framework which generalizes rationale extractor optimization as follows : ( 1 ) specify architecture for a learned rationale extractor ; ( 2 ) select explainability objectives ( i.e. , faithfulness and plausibility criteria ) ; and ( 3 ) jointly train the task model and rationale extractor on the task using selected objectives .
+UNIREX enables replacing prior works ’ heuristic design choices with a generic learned rationale extractor in ( 1 ) and optimizing it for all three desiderata in ( 2)-(3 ) .
+To facilitate comparison between methods w.r.t . multiple desiderata , we introduce the Normalized Relative Gain ( NRG ) metric .
+Across five English text classification datasets , our best UNIREX configuration outperforms the strongest baselines by an average of 32.9 % NRG .
+Plus , we find that UNIREXtrained rationale extractors ’ faithfulness can even generalize to unseen datasets and tasks .
+1 Figure 1 : Desiderata of Rationale Extraction .
+Unlike prior works , UNIREX enables optimizing for all three desiderata .
+( Bender et al. , 2021 ) .
+Thus , explaining LMs ’ behavior is crucial for promoting trust , ethics , and safety in NLP systems ( Doshi - Velez and Kim , 2017 ; Lipton , 2018 ) .
+Given a LM ’s ( i.e. , task model ’s ) predicted label on a text classification instance , an extractive rationale is a type of explanation that highlights the tokens that most influenced the model to predict that label ( Luo et al. , 2021 ) .
+Ideally , rationale extraction should be faithful ( Ismail et al. , 2021 ; Jain et al. , 2020 ) and plausible ( DeYoung et al. , 2019 ) , without hurting the LM ’s task performance ( DeYoung et al. , 2019 ) ( Fig . 1 ) .
+Configuring the rationale extractor and its training can greatly impact these desiderata , yet prior works have commonly adopted two suboptimal heuristics .
+First , many works rely in some way on attribution algorithms ( AAs ) , which extract rationales via handcrafted functions ( Sundararajan et al. , 2017 ; Ismail et al. , 2021 ; Situ et al. , 2021 ) .
+AAs can not be directly trained and tend to be computeintensive ( Bastings and Filippova , 2020 ) .
+Also , AAs can be a bottleneck for plausibility , as producing human - like rationales is a complex objec Introduction Large neural language models ( LMs ) have yielded state - of - the - art performance on various natural language processing ( NLP ) tasks ( Devlin et al. , 2018 ; Liu et al. , 2019 ) .
+However , LMs ’ complex reasoning processes are notoriously opaque ( Rudin , 2019 ) , posing concerns about the societal implications of using LMs for high - stakes decision - making ∗ Work done while AC was a research intern at Meta AI . 51 Proceedings of BigScience Episode # 5 – Workshop on Challenges & Perspectives in Creating Large Language Models , pages 51 - 67 May 27 , 2022 c 2022 Association for Computational Linguistics  tive requiring high capacity rationale extractors ( Narang et al. , 2020 ; DeYoung et al. , 2019 ) .
+Second , many works use a specialized select - predict pipeline ( SPP ) , where a predictor module is trained to solve the task using only tokens chosen by a selector module ( Jain et al. , 2020 ; Yu et al. , 2021 ; Paranjape et al. , 2020 ) .
+Instead of faithfulness optimization , SPPs heuristically aim for “ faithfulness by construction " by treating the selected tokens as a rationale for the predictor ’s output ( which depends only on those tokens ) .
+Still , SPPs typically have worse task performance than vanilla LMs since SPPs hide the full input from the predictor .
+SNLI ( Carton et al. , 2020 ; DeYoung et al. , 2019 ) – our best UNIREX configuration outperforms the strongest baselines by an average of 32.9 % NRG ( Sec . 4.2 ) , showing that UNIREX can optimize rationale extractors for all three desiderata .
+In addition , we verify our UNIREX design choices via extensive ablation studies ( Sec . 4.3 ) .
+Furthermore , UNIREX - trained extractors have high generalization power , yielding high plausiblity with minimal gold rationale supervision ( Sec . 4.4 ) and high faithfulness on unseen datasets and tasks ( Sec . 4.5 ) .
+Finally , our user study shows that humans judge UNIREX rationales as more plausible than rationales extracted using other methods ( Sec . 4.6 ) .
+To tackle this challenge , we propose the UNIfied Learning Framework for Rationale EXtraction ( UNIREX ) , which generalizes rationale extractor optimization as follows : ( 1 ) specify architecture for a learned rationale extractor ; ( 2 ) select explainability objectives ( i.e. , faithfulness and plausibility criteria ) ; and ( 3 ) jointly train the task model and rationale extractor on the task using selected objectives ( Sec . 3 ) .
+UNIREX enables replacing prior works ’ heuristic design choices in ( 1 ) with a generic learned rationale extractor and optimizing it for all three desiderata in ( 2)-(3 ) .
+2 Problem Formulation Rationale
+Extraction Let Ftask = ftask ( fenc ( · ) ) be a task model for M -class text classification ( Sec . A.1 ) , where fenc is the text encoder and ftask is the task output head .
+Typically , Ftask has a BERT - style architecture ( Devlin et al. , 2018 ) , in which fenc is a Transformer ( Vaswani et al. , 2017 ) while ftask is a linear layer with softmax classifier .
+Let xi =
+[ xti ] nt=1 be the n - token input sequence ( e.g. , a sentence ) for task instance i , and
+Ftask ( xi ) ∈
+RM be the logit vector for the output of the task model .
+Let ŷi = arg max j Ftask ( xi ) j be the class predicted by Ftask .
+Given Ftask , xi , and ŷi , the goal of rationale extraction is to output vector si = [ sti ]
+nt=1 ∈
+Rn , such that each sti ∈ R is an importance score indicating how much token xti influenced Ftask to predict class ŷi .
+Let Fext be a rationale extractor , such that si = Fext ( Ftask , xi , ŷi ) .
+Fext can be a learned or heuristic function .
+In practice , the final rationale is often obtained by binarizing si as ri ∈ { 0 , 1}n , via the top - k% strategy : rit = 1 if sti is one of the top - k% scores in si ; otherwise , rit = 0 ( DeYoung et al. , 2019 ; Jain et al. , 2020 ; Pruthi et al. , 2020 ; Chan et al. , 2021 ) .
+For ( k ) top - k% , let ri be the “ important " ( i.e. , ones ) tokens in ri , when using 0 ≤ k ≤ 100 .
+Faithfulness means how well a rationale reflects Ftask ’s true reasoning process for predicting ŷi ( Jacovi and Goldberg , 2020 ) .
+Hence , faith(k ) fulness metrics measure how much the ri tokens impact pŷi ( xi ) , which denotes Ftask ’s confidence probability for ŷi when using xi as input ( DeYoung et al. , 2019 ; Shrikumar et al. , 2017 ; Hooker et al. , 2018 ; Pruthi et al. , 2020 ) .
+Recently , comprehensiveness and sufficiency have emerged as popular faithfulness metrics ( DeYoung et al. , UNIREX provides significant flexibility in performing ( 1)-(3 ) .
+For ( 1 ) , any model architecture is applicable , but we study Transformer LM based rationale extractors in this work ( Zaheer et al. , 2020 ; DeYoung et al. , 2019 ) .
+We focus on two architectures : ( A ) Dual LM , where task model and rationale extractor are separate and ( B ) Shared LM , where task model and rationale extractor share parameters .
+For ( 2 ) , any faithfulness and plausibility criteria can be used .
+Following DeYoung et al. ( 2019 ) , we focus on comprehensiveness and sufficiency as faithfulness criteria , while using similarity to gold rationales as plausibility criteria .
+For ( 3 ) , trade - offs between the three desiderata can be easily managed during rationale extractor optimization by setting arbitrary loss weights for the faithfulness and plausibility objectives .
+Plus , though computing the faithfulness criteria involves discrete ( nondifferentiable ) token selection , using Shared LM can approximate end - to - end training and enable both task model and rationale extractor to be optimized w.r.t .
+all three desiderata ( Sec . 3.3 ) .
+To evaluate all three desiderata in aggregate , we introduce the Normalized Relative Gain ( NRG ) metric .
+Across five English text classification datasets – SST , Movies , CoS - E , MultiRC , and e52  2019 ) .
+Comprehensiveness ( comp ) measures the ( k ) change in pŷi when ri is removed from the in(k ) put : comp = pŷi ( xi ) −
+pŷi ( xi \ri ) .
+Sufficiency ( k ) ( suff ) measures the change in pŷi when only ri is ( k ) kept in the input : suff =
+pŷi ( xi ) − pŷi ( ri ) .
+High faithfulness is signaled by high comp and low suff .
+Plausibility means how convincing a rationale is to humans ( Jacovi and Goldberg , 2020 ) .
+This can be measured by automatically computing the similarity between Fext ’s rationales ( either si or ri ) and human - annotated gold rationales ( DeYoung et al. , 2019 ) , or by asking human annotators to rate whether Fext ’s rationales make sense for predicting ŷi ( Strout et al. , 2019 ; Doshi - Velez and Kim , 2017 ) .
+Typically , a gold rationale is a binary vector r∗i ∈ { 0 , 1}n , where ones / zeros indicate important / unimportant tokens ( Lei et al. , 2016 ) .
+Task Performance , w.r.t . rationale extraction , concerns how much Ftask ’s task performance ( on test set ) drops when Ftask is trained with explainability objectives ( i.e. , faithfulness , plausibility ) for Fext .
+As long as Ftask is trained with non - task losses , Ftask ’s task performance can be affected .
+3 for task input xi , we first use Ftask to predict yi , then use Fext to output a rationale ri for Ftask ’s prediction ŷi .
+Below , we discuss options for the rationale extractor and explainability objectives .
+3.1 Rationale Extractor In UNIREX , Fext is a learned function by default .
+Learned Fext can be any model that transforms xti into sti .
+Given their success in NLP explainability ( DeYoung et al. , 2019 ) , we focus on pre - trained Transformer LMs and highlight two architectures : Dual LM ( DLM ) and Shared LM ( SLM ) ( Fig . 3 ) .
+For DLM , Ftask and Fext are two separate Transformer LMs .
+DLM provides more dedicated capacity for Fext , which can help Fext output plausible rationales .
+For SLM , Ftask and Fext are two Transformer LMs sharing encoder fenc , while Fext has its own output head fext .
+SLM leverages multitask learning between Ftask and Fext , which can improve faithfulness since Fext gets more information about Ftask ’s reasoning process .
+Unlike heuristic Fext ( Sec . A.2 ) , learned Fext can be optimized for faithfulness / plausibility , but can not be used out of the box without training .
+Learned
+Fext is preferred if : ( A ) optimizing for both faithfulness and plausibility , and ( B ) gold rationales are available for plausibility optimization ( Sec .
+A.3 ) .
+UNIREX
+Given task model Ftask , UNIREX generalizes rationale extractor optimization as follows : ( 1 ) choose architecture for a learned rationale extractor Fext ; ( 2 ) select explainability objectives ( i.e. , faithfulness loss Lfaith and plausibility loss Lplaus ) ; and ( 3 ) jointly train Ftask and Fext using Ltask ( task loss ) , Lfaith , and Lplaus .
+UNIREX training consists of two backpropagation paths ( Fig . 2 ) .
+The first path is used to update Ftask w.r.t .
+Ltask and Lfaith .
+Whereas Ltask is computed w.r.t .
+the task target yi , Lfaith is computed only using the task input xi ( k ) and the top - k% important tokens ri ( obtained via Fext ) , based on some combination of comp and suff ( Sec . 2 ) .
+The second path is used to update Fext w.r.t .
+Lplaus , which encourages importance scores si to approximate gold rationale r∗i .
+Thus , UNIREX frames rationale extraction as the following optimization problem : min Ltask ( xi , yi ; Ftask ) Ftask , Fext ( k ) + αf Lfaith ( xi , ri ; Ftask ) ( 1 ) + αp
+Lplaus ( xi , r∗i ; Fext ) , where αf and αp are loss weights .
+If Ftask and Fext share parameters , then the shared parameters will be optimized w.r.t .
+all losses .
+During inference , 53 3.2 Explainability Objectives After selecting Fext , we specify the explainability objectives , which can be any combination of faithfulness and plausibility criteria .
+In prior approaches ( e.g. , AA , SPPs ) , the rationale extractor is not optimized for both faithfulness and plausibility , but UNIREX makes this possible .
+For any choice of learned Fext , UNIREX lets us easily “ plug and play " different criteria and loss weights , based on our needs and domain knowledge , to find those that best balance the rationale extraction desiderata .
+Faithfulness Evaluating rationale faithfulness is still an open problem with many existing metrics , and UNIREX is not tailored for any specific metric .
+Still , given the prevalence of comp / suff ( Sec . 2 ) , we focus on comp / suff based objectives .
+Recall that comp measures the importance of to(k ) kens in ri as how pŷi ( x̂i ) , Ftask ’s predicted probability for class ŷi , changes when those tokens are removed from xi .
+Intuitively , we want pŷi ( x̂i ) to be ( k ) higher than pŷi ( xi \ri ) , so higher comp is better .
+Since comp is defined for a single class ’ probability rather than the label distribution , we can define the comp loss Lcomp via cross - entropy loss LCE , as in  Figure 2 : UNIREX Framework .
+UNIREX enables jointly optimizing the task model ( Ftask ) and rationale extractor ( Fext ) , w.r.t . faithfulness ( Lfaith ) , plausibility ( Lplaus ) , and task performance ( Ltask ) .
+( k ) want pŷi ( ri ) to be higher than pŷi ( x̂i ) , so lower suff is better .
+For suff loss Lsuff , we define the difference and margin criteria analogously with margin ms
+but the opposite sign ( since lower suff is better ): ( k ) Lsuff - diff = LCE ( Ftask ( ri ) , yi ) − LCE ( Ftask ( xi ) , yi )
+( 5 ) ( k ) Lsuff - margin = max(−ms , LCE ( Ftask ( ri ) , yi ) − LCE ( Ftask ( xi ) , yi ) )
++ ms Figure 3 : Rationale Extractor Types .
+In our experiments , we find that the marginbased comp / suff criteria are effective ( Sec . 4.3 ) , though others ( e.g. , KL Div , MAE ) can be used ( k ) too ( Sec . A.4.1 ) .
+Note that ri is computed via top - k% thresholding ( Sec . 2 ) , so we also need to specify a set K of threshold values .
+We separately compute the comp / suff losses for each k ∈ K , then obtain the final comp / suff losses by averaging over all k values via area - over - precision - curve ( AOPC ) ( DeYoung et al. , 2019 ) .
+To reflect this , we denote the comp and suff losses as Lcomp , K and Lsuff , K , respectively .
+Let αf Lfaith = αc Lcomp , K + αs Lsuff , K , where αc and αs are loss weights .
+Plausibility Plausibility is defined as how convincing a rationale is to humans ( Jacovi and Goldberg , 2020 ) , i.e. , whether humans would agree the rationale supports the model ’s prediction .
+While optimizing for plausibility should ideally involve human - in - the - loop feedback , this is prohibitive .
+Instead , many works consider gold rationales as a cheaper form of plausibility annotation ( DeYoung et al. , 2019 ; Narang et al. , 2020 ; Jain et al. , 2020 ) .
+Thus , if gold rationale supervision is available , then the following difference criterion for Lcomp : Lcomp - diff = LCE ( Ftask ( xi ) , yi ) ( k ) − LCE ( Ftask ( xi \ri ) , yi ) )
+LCE ( Ftask ( xi ) , yi ) = −yi log(Ftask ( xi ) )
+( 2 ) ( 3 ) For training stability , we compute comp loss for target class yi here instead of Ftask ’s predicted class ŷi , since ŷi is a moving target during training .
+Using Lcomp - diff , it is possible for ( k ) LCE ( Ftask ( xi \ri ) , yi ) ) to become much larger than LCE ( Ftask ( xi ) , yi ) , leading to arbitrarily negative losses .
+To avoid this , we can add margin mc to the loss function , giving the margin criterion : Lcomp - margin = max(−mc , LCE ( Ftask ( xi ) , yi ) ( k ) − LCE ( Ftask ( xi \ri ) , yi ) )
++ mc ( 6 ) ( 4 ) Recall that suff measures the importance of to(k ) kens in ri as how pŷi ( x̂i ) , Ftask ’s predicted probability for class ŷi , changes when they are the only tokens kept in xi .
+Based on suff ’s definition , we 54  we can optimize for plausibility .
+With gold rationale r∗i for input xi , plausibility optimization entails training Fext to predict binary importance lat bel r∗,t i for each token xi .
+This is essentially token classification , so one natural choice for Lplaus is the token - level binary cross - entropy ( BCE ) criterion : Lplaus - BCE = − X ∗,t ri log(Fext ( xti ) )
+studies to verify our design choices for UNIREX ( Sec . 4.3 ) .
+Third , we present experiments highlighting UNIREX ’s generalization ability , both in terms of limited gold rationale supervision ( Sec . 4.4 ) and zero - shot transfer ( Sec . 4.5 ) .
+Fourth , we conduct a user study to further evaluate UNIREX rationales ’ plausibility , relative to those generated by other methods ( Sec . 4.6 ) .
+See Sec .
+A.5 for implementation details ( LM architecture , AA settings , training ) .
+( 7 ) t Besides BCE loss , we can also consider other criteria like sequence - level KL divergence and L1 loss .
+See Sec .
+A.4.2 for discussion of these and other plausibility criteria .
+4.1 Datasets We primarily use SST ( Socher et al. , 2013 ; Carton et al. , 2020 ) , Movies ( Zaidan and Eisner , 2008 ) , CoS - E ( Rajani et al. , 2019 ) , MultiRC ( Khashabi et al. , 2018 ) , and e - SNLI ( Camburu et al. , 2018 ) , all of which have gold rationale annotations .
+The latter four datasets were taken from the ERASER benchmark ( DeYoung et al. , 2019 ) .
+Metrics We use the metrics from the ERASER explainability benchmark ( DeYoung et al. , 2019 ) .
+For faithfulness , we use comprehensiveness ( Comp ) and sufficiency ( Suff ) , for k =
+[ 1 , 5 , 10 , 20 , 50 ] ( DeYoung et al. , 2019 ) .
+For plausibility , we use area under precision - recall curve ( AUPRC ) and token F1 ( TF1 ) to measure similarity to gold rationales ( DeYoung et al. , 2019 ; Narang et al. , 2020 ) .
+For task performance , we follow ( DeYoung et al. , 2019 ) and ( Carton et al. , 2020 ) in using accuracy ( SST , CoS - E ) and macro F1 ( Movies , MultiRC , e - SNLI ) .
+To aggregately evaluate multiple desiderata , we introduce the Normalized Relative Gain ( NRG ) metric , which is based on the ARG metric from Ye et al. ( 2021 ) .
+NRG normalizes raw metrics ( e.g. , F1 , sufficiency ) to scores between 0 and 1 ( higher is better ) .
+Given a set of raw metric scores
+Z = { z1 , z2 , ... } ( each from a different method ) , NRG(zi ) captures zi ’s value relative to min(Z ) and max(Z ) .
+If higher values are better for the given metric ( e.g. , F1 ) , then we zi −min(Z ) have : NRG(zi ) = max(Z)−min(Z ) .
+If lower values are better ( e.g. , sufficiency ) , then we have : max(Z)−zi NRG(zi ) = max(Z)−min(Z ) .
+After computing NRG for multiple raw metrics , we can aggregate them w.r.t . desiderata via averaging .
+Let FNRG , PNRG , and TNRG be the NRG values for faithfulness , plausibility , and task performance , respectively .
+Finally , we compute the composite NRG as : CNRG = FNRG+PNRG+TNRG .
+3 Results Reporting For all results , we report average over three seeds and the five k values .
+We 3.3 Training and Inference After setting Fext , Lfaith , and Lplaus , we can move on to training Ftask and Fext .
+Since top - k% rationale binarization ( Sec . 3.2 ) is not differentiable , by default , we can not backpropagate Lfaith through all of Fext ’s parameters .
+Thus , Ftask is trained via Ltask and Lfaith , while Fext is only trained via Lplaus .
+This means Fext ’s rationales ri are indirectly optimized for faithfulness by regularizing Ftask such that its behavior aligns with ri .
+The exception is if we are using the SLM variant , where encoder fenc is shared by Ftask and Fext .
+In this case , fenc is optimized w.r.t .
+all losses , ftask is optimized w.r.t .
+Ltask and Lfaith , and fext is optimized w.r.t .
+Lplaus .
+SLM is a simple way to approximate end - to - end training of Ftask and Fext .
+In contrast , past SPPs have used more complex methods like reinforcement learning ( Lei et al. , 2016 ) and the reparameterization trick ( Bastings et al. , 2019 ) , whose training instability can hurt task performance ( Jain et al. , 2020 ) .
+Now , we summarize the full learning objective .
+Given that cross - entropy loss Ltask = LCE ( Ftask ( xi ) , yi ) is used to train Ftask to predict yi , the full learning objective is : L = Ltask + αf Lfaith + αp
+Lplaus = Ltask + αc Lcomp , K + αs Lsuff , K + αp Lplaus .
+( 8) During inference , we use Ftask to predict yi , then use Fext to output ri for Ftask ’s predicted label ŷi .
+4 Experiment Setup Experiments We present empirical results demonstrating UNIREX ’s effectiveness in managing trade - offs between faithfulness , plausibility , and task performance during rationale extractor optimization .
+First , our main experiments compare methods w.r.t . faithfulness , plausibility , and task performance ( Sec . 4.2 ) .
+Second , we perform various ablation 55  Figure 4 : Composite NRG Comparison ( w/o Plausibility Optimization ) .
+Composite NRG ( CNRG ) is the mean of the three desiderata NRG scores .
+For each dataset , we use CNRG to compare methods that do not optimize for plausibility .
+Figure 5 : Composite NRG Comparison ( w/ Plausibility Optimization ) .
+Composite NRG ( CNRG ) is the mean of the three desiderata NRG scores .
+For each dataset , we use CNRG to compare methods that do optimize for plausibility .
+denote each UNIREX configuration with “ ( [ rationale extractor]-[explainability objectives ] ) ” .
+F , P , and FP denote faithfulness , plausibility , and faithfulness+plausibility , respectively .
+predictor that uses the full input .
+In addition , we introduce FRESH+P and A2R+P , which augment FRESH and A2R , respectively , with plausibility optimization .
+The third category is AA - based regularization : SGT ( Ismail et al. , 2021 ) , which uses a sufficiency - based criterion to optimize for faithfulness .
+We also consider SGT+P , which augments SGT with plausibility optimization .
+Baselines The first category is AAs , which are not trained : AA ( Grad ) ( Simonyan et al. , 2013 ) , AA ( Input*Grad ) ( Denil et al. , 2014 ) , AA ( DeepLIFT ) ( Lundberg and Lee , 2017 ) , AA ( IG ) ( Sundararajan et al. , 2017 ) .
+We also experiment with IG for L2E ( Situ et al. , 2021 ) , which distills knowledge from an AA to an LM .
+The second category is SPPs : FRESH ( Jain et al. , 2020 ) and A2R ( Yu et al. , 2021 ) .
+For FRESH , we use a strong variant where IG rationales are directly given to the predictor , rather than output by a trained selector .
+A2R aims to improve SPP task performance by regularizing the predictor with an attention - based 4.2 Main Results Fig . 4 - 6 display the main results .
+In Fig . 4/5 , we compare the CNRG for all methods and datasets , without / with gold rationales .
+In both plots , we see that UNIREX variants achieve the best CNRG across all datasets , indicating that they are effective in balancing the three desiderata .
+In particular , UNIREX ( DLM - FP ) and UNIREX ( SLM56  Figure 6 : NRG Comparison by Desiderata .
+We show FNRG , PNRG , and TNRG for all methods , averaged over all datasets .
+FP ) have very high CNRG scores , both yielding more than 30 % improvement over the strongest baselines .
+Fig . 6 compares methods w.r.t . desiderata NRG ( i.e. , FNRG , PNRG , TNRG ) .
+Here , the left / right plots show methods without / with gold rationales .
+Again , we see that UNIREX variants achieve a good NRG balance of faithfulness , plausibility , and task performance .
+Meanwhile , many baselines ( e.g. , AA ( IG ) , A2R , SGT+P ) do well on some desiderata but very poorly on others .
+Ablation UNIREX Config Faithfulness Plausibility Performance Comp ( ↑ ) Suff ( ↓ ) AUPRC ( ↑ ) Acc ( ↑ )
+Ext Type ( F ) AA - F ( Rand ) AA - F ( Gold ) AA - F ( Inv ) AA - F ( IG ) 0.171 ( ±0.040 ) 0.232 ( ±0.088 ) 0.242 ( ±0.010 ) 0.292 ( ±0.051 ) 0.327 ( ±0.050 ) 0.249 ( ±0.021 ) 0.357 ( ±0.019 ) 0.171 ( ±0.038 ) 44.92 ( ±0.00 ) 100.00 ( ±0.00 ) 20.49 ( ±0.00 ) 48.13 ( ±1.14 ) 94.05 ( ±0.35 ) 93.81 ( ±0.54 ) 93.47 ( ±1.81 ) 92.97 ( ±0.44 ) Ext Type ( FP ) AA - FP ( Sum ) AA - FP ( MLP ) DLM - FP SLM - FP 0.296 ( ±0.067 ) 0.285 ( ±0.051 ) 0.319 ( ±0.090 ) 0.302 ( ±0.039 ) 0.185 ( ±0.048 ) 0.197 ( ±0.100 ) 0.167 ( ±0.036 ) 0.113 ( ±0.013 ) 47.60 ( ±2.44 ) 54.82 ( ±1.97 ) 85.80 ( ±0.74 ) 82.55 ( ±0.84 ) 93.25 ( ±0.45 ) 93.23 ( ±0.92 ) 93.81 ( ±0.18 ) 93.68 ( ±0.67 ) Comp / Suff Loss SLM - FP ( Comp ) SLM - FP ( Suff ) SLM - FP ( Comp+Suff ) 0.350 ( ±0.048 ) 0.166 ( ±0.003 ) 0.302 ( ±0.039 ) 0.310 ( ±0.049 ) 0.152 ( ±0.012 ) 0.113 ( ±0.013 ) 82.79 ( ±0.62 ) 83.74 ( ±0.84 ) 82.55 ( ±0.84 ) 93.59 ( ±0.11 ) 94.16 ( ±0.39 ) 93.68 ( ±0.67 ) Suff Criterion SLM - FP ( KL Div ) SLM - FP ( MAE ) SLM - FP ( Margin ) 0.306 ( ±0.098 ) 0.278 ( ±0.058 ) 0.302 ( ±0.039 ) 0.131 ( ±0.005 ) 0.143 ( ±0.008 ) 0.113 ( ±0.013 ) 82.62 ( ±0.88 ) 82.66 ( ±0.61 ) 82.55 ( ±0.84 ) 93.06 ( ±0.25 ) 93.78 ( ±0.13 ) 93.68 ( ±0.67 ) SLM Ext Head SLM - FP ( Linear ) SLM - FP ( MLP-2048 - 2 ) SLM - FP ( MLP-4096 - 3 ) 0.302 ( ±0.039 ) 0.323 ( ±0.071 ) 0.295 ( ±0.057 ) 0.113 ( ±0.013 ) 0.144 ( ±0.012 ) 0.154 ( ±0.027 ) 82.55 ( ±0.84 ) 83.82 ( ±0.77 ) 84.53 ( ±0.61 ) 93.68 ( ±0.67 ) 93.67 ( ±0.18 ) 93.19 ( ±0.79 ) Table 1 : UNIREX Ablation Studies on SST .
+4.3 Ablation Studies ( MLP ) replaces the sum pooler with a MLP - based pooler to increase capacity for plausibility optimization .
+Task performance for all four methods is similar , AA - FP ( Sum ) dominates on faithfulness , and DLM - FP and SLM - FP dominate on plausibility .
+AA - FP ( MLP ) does not perform as well on faithfulness but slightly improves on plausibility compared to AA - FP ( Sum ) .
+Comp / Suff Losses The Comp / Suff Loss section compares different combinations of Comp and Suff losses , using SLM - FP .
+Note that SLMFP ( Comp+Suff ) is equivalent to SLM - FP shown in other tables / sections .
+As expected , SLMFP ( Comp ) does best on Comp , but SLM - FP ( Comp+Suff ) actually does best on Suff .
+Meanwhile , SLM - FP , ( Suff ) does second - best on Suff but is much worse on Comp .
+This shows that Comp and Suff are complementary for optimization .
+Suff Criterion The Suff Criterion section compares different Suff criteria , using SLM - FP .
+SLMFP ( KLDiv ) uses the KL divergence criterion , SLM - FP ( MAE ) uses the MAE criterion , and SLMFP ( Margin ) uses the margin criterion .
+SLM - FP ( Margin ) is equivalent to SLM - FP in other ta
+We present five ablation studies to validate the effectiveness of our UNIREX design choices .
+The ablation results are displayed in Table 1 .
+In this table , each of the five sections shows results for a different ablation .
+Thus , all numbers within the same section and column are comparable .
+Extractor Type In the Ext Type ( F ) section , we compare four heuristic rationale extractors , using AA - F. Rand uses random importance scores , Gold directly uses the gold rationales , Inv uses the inverse of the gold rationales , and IG uses IG .
+All heuristics yield similar task performance , but IG dominates on all faithfulness metrics .
+This makes sense because IG is computed using Ftask ’s inputs / parameters / outputs , while the others do not have this information .
+For plausibility , Gold is the best , Inv is the worst , and Rand and IG are about the same , as none of the heuristics are optimized for plausibility .
+In the Ext Type ( FP ) section , we compare four learned rationale extractors .
+By default , attribution algorithms ’ dimension scores are pooled into token scores via sum pooling .
+AA - FP ( Sum ) uses IG with sum pooling , while AA - FP 57  Task Dataset Method Faithfulness Task Performance Comp ( ↑ ) Suff ( ↓ ) Perf ( ↑ ) SST AA ( IG ) UNIREX ( AA - F ) UNIREX ( DLM - FP ) 0.119 ( ±0.009 ) 0.292 ( ±0.051 ) 0.319 ( ±0.090 ) 0.258 ( ±0.031 ) 0.171 ( ±0.038 ) 0.167 ( ±0.036 ) 93.81 ( ±0.55 ) 92.97 ( ±0.44 ) 93.81 ( ±0.54 ) Yelp AA ( IG ) UNIREX ( AA - F ) UNIREX ( DLM - FP ) 0.069 ( ±0.004 ) 0.138 ( ±0.078 ) 0.265 ( ±0.094 ) 0.219 ( ±0.028 ) 0.126 ( ±0.059 ) 0.097 ( ±0.033 ) 92.50 ( ±2.07 ) 83.93 ( ±13.20 ) 92.37 ( ±0.46 ) Amazon AA ( IG ) UNIREX ( AA - F ) UNIREX ( DLM - FP ) 0.076 ( ±0.010 ) 0.130 ( ±0.077 ) 0.232 ( ±0.072 ) 0.224 ( ±0.037 ) 0.073 ( ±0.039 ) 0.098 ( ±0.033 ) 91.13 ( ±0.28 ) 77.90 ( ±13.12 ) 89.35 ( ±2.22 ) HSD Stormfront AA ( IG ) UNIREX ( AA - F ) UNIREX ( DLM - FP ) 0.135 ( ±0.010 ) 0.219 ( ±0.009 ) 0.167 ( ±0.084 ) 0.245 ( ±0.059 ) 0.092 ( ±0.025 ) 0.115 ( ±0.059 ) 10.48 ( ±1.66 ) 10.36 ( ±1.94 ) 10.37 ( ±2.66 ) OSD OffenseEval AA ( IG ) UNIREX ( AA - F ) UNIREX ( DLM - FP ) 0.097 ( ±0.009 ) 0.074 ( ±0.040 ) 0.140 ( ±0.049 ) 0.244 ( ±0.052 ) 0.102 ( ±0.024 ) 0.087 ( ±0.045 ) 33.51 ( ±0.99 ) 32.62 ( ±4.85 ) 35.52 ( ±1.26 ) ID SemEval2018 AA ( IG ) UNIREX ( AA - F ) UNIREX ( DLM - FP ) 0.128 ( ±0.014 ) 0.069 ( ±0.041 ) 0.149 ( ±0.052 ) 0.248 ( ±0.064 ) 0.096 ( ±0.011 ) 0.102 ( ±0.053 ) 29.63 ( ±4.72 ) 49.95 ( ±8.31 ) 31.97 ( ±2.80 ) SA Table 2 : Zero - Shot Faithfulness Transfer from SST .
+Figure 7 : Gold Rationale Data Efficiency on SST . 4.5 bles / sections .
+All criteria yield similar performance and plausibility , while Margin is slightly better on faithfulness .
+Zero - Shot Faithfulness Transfer In Table 2 , we investigate if Fext ’s faithfulness , via UNIREX training on some source dataset , can generalize to unseen target datasets / tasks in a zero - shot setting ( i.e. , no fine - tuning on target datasets ) .
+Plausibility is not evaluated here , since these unseen datasets do not have gold rationales .
+As the source model , we compare various SST - trained models : AA ( IG ) and UNIREX ( AA - F , DLM - FP ) .
+First , we evaluate on unseen datasets for a seen task ( sentiment analysis ( SA ) ):
+Yelp ( Zhang et al. , 2015 ) and Amazon ( McAuley and Leskovec , 2013 ) .
+Second , we evaluate on unseen datasets for unseen tasks : Stormfront ( hate speech detection ( HSD ) , binary F1 ) ( de Gibert et al. , 2018 ) , OffenseEval ( offensive speech detection ( OSD ) , macro F1 ) ( Zampieri et al. , 2019 ) , and SemEval2018 ( irony detection ( ID ) , binary F1 ) ( Van Hee et al. , 2018 ) .
+We want to show that , even if Ftask yields poor task performance on unseen datasets , Fext ’s rationales can still be faithful .
+As expected , all methods achieve much lower task performance in the third setting than in the first two settings .
+However , faithfulness does not appear to be strongly correlated with task performance , as unseen tasks ’ comp / suff scores are similar to seen tasks ’ .
+Across all datasets , DLM - FP has the best faithfulness and is the only method whose comp is always higher than suff .
+AA - F is not as consistently strong as DLM - FP , but almost always beats AA ( IG ) on comp and suff .
+Meanwhile , AA ( IG ) has the worst comp and suff overall .
+Ultimately , these results suggest that UNIREX - trained models ’ faithfulness ( i.e. , alignment between Ftask ’s and Fext ’s outputs ) is a dataset / task agnostic property ( i.e. , can generalize across datasets / tasks ) , further establishing UNIREX ’s utility in low - resource settings .
+SLM Extractor Head The SLM Ext Head section compares different extractor heads , using SLM - FP .
+Linear is the default choice and uses a linear layer .
+MLP-2048 - 2 uses a MLP with two 2048 - dim hidden layers .
+MLP-4096 - 3 uses a MLP with three 4096 - dim hidden layers .
+All three output head types yield similar performance , but decreasing head capacity yields better faithfulness , while increasing head capacity heads yields better plausibility .
+This trades off faithfulness and plausibility , although larger heads will be more compute - intensive .
+4.4 Gold Rationale Data Efficiency UNIREX supports arbitrary amounts of gold rationale supervision and allows us to account for data efficiency .
+In Fig . 7 , we compare plausibility ( in AUPRC ) for γ = [ 0.5 , 1 , 5 , 10 , 20 , 100 ] ( i.e. , % of train instances with gold rationales ) .
+We compare AA ( IG ) and four UNIREX variants ( AA - F , AAFP , DLM - FP , SLM - FP ) .
+AA ( IG ) and AA - F do not use gold rationales and thus have the same AUPRC for all γ .
+Standard deviation is shown by the error bands .
+UNIREX ( DLM - FP ) and UNIREX ( SLMFP ) dominate across all γ values , with AUPRC slowly decreasing as γ decreases .
+Even at γ = 0.5 , they can still achieve high AUPRC .
+This suggests that UNIREX ’s gold rationale batching procedure ( Sec . A.3 ) is effective for learning from minimal gold rationale supervision and demonstrates how UNIREX enables us to manage this trade - off .
+See Sec .
+A.6 for similar results on CoS - E. 58  Method Forward Simulation often not the target label , leading to misalignment with its gold - like rationale .
+A2R+P is a great example of how automatic plausibility evaluation can be misleading .
+For the accuracy , confidence , and alignment questions , we achieved Fleiss ’ Kappa ( Fleiss , 1971 ) inter - annotator agreement scores of 0.2456 ( fair ) , 0.1282 ( slight ) , and , 0.1561 ( slight ) , respectively .
+This lack of agreement shows the difficulty of measuring plausibility .
+Subjective Rating Accuracy ( % ) Confidence ( 1 - 4 ) Alignment ( 1 - 5 )
+No Rationale 92.00 ( ±3.35 ) 3.02 ( ±0.39 )  
+SGT+P A2R+P UNIREX ( AA - FP ) UNIREX ( DLM - FP ) 80.80 ( ±9.73 ) 41.20 ( ±4.71 ) 72.00 ( ±7.78 ) 83.60 ( ±5.41 ) 2.34 ( ±0.31 ) 2.83 ( ±0.28 ) 2.00 ( ±0.31 ) 2.77 ( ±0.28 ) 3.64 ( ±0.28 ) 2.97 ( ±0.12 ) 3.26 ( ±0.31 ) 3.96 ( ±0.22 ) Gold 81.20 ( ±3.03 ) 2.88 ( ±0.30 ) 4.00 ( ±0.20 ) Table 3 : Plausibility User Study on SST .
+4.6 User Study on Plausibility Gold rationale based plausibility evaluation is noisy because gold rationales are for the target label , not a model ’s predicted label .
+Thus , we conduct two five - annotator user studies ( Table 3 ) to get a better plausibility measurement .
+Given 50 random test instances from SST , we get the rationales for SGT+P , A2R+P , UNIREX ( AA - FP ) , and UNIREX ( DLMFP ) , plus the gold rationales .
+For each instance , we threshold all rationales to have the same number of positive tokens as the gold rationale .
+The first user study is forward simulation ( Hase and Bansal , 2020 ; Jain et al. , 2020 ) .
+Here , the annotator is given an input and a rationale for some model ’s prediction , then asked what ( binary ) sentiment label the model most likely predicted .
+For forward simulation , we also consider a No Rationale baseline , where no tokens are highlighted .
+For No Rationale and Gold , the target label is the correct choice .
+Annotators are also asked to rate their confidence ( 4point Likert scale ) in their answer to this question .
+The second user study involves giving a subjective rating of how plausible the rationale is ( Hase and Bansal , 2020 ) .
+Here , the annotator is given the input , rationale , and model ’s predicted label , then asked to rate ( 5 - point Likert scale ) how aligned the rationale is with the prediction .
+In both forward simulation and subjective rating , we find that DLM - FP performs best among all non - oracle methods and even beats Gold on accuracy , further supporting that DLM - FP rationales are plausible .
+As expected , the fact that Gold does not achieve near-100 % accuracy shows the discrepancy between evaluating plausibility based on the target label ( i.e. , gold rationale similarity ) and Ftask ’s predicted label ( forward simulation ) .
+Meanwhile , SGT+P and AA - FP , which had lower AUPRC / TF1 in our automatic evaluation , also do worse in accuracy / alignment .
+Also , users found SGT+P and AAFP rationales harder to understand , as shown by their lower confidence scores .
+Meanwhile , A2R+P had high AUPRC / TF1 , but gets very low accuracy / alignment because A2R+P ’s predicted label 5 Related Work Faithfulness Many prior works have tried to improve the faithfulness of extractive rationales through the use of AAs ( Bastings and Filippova , 2020 ) .
+Typically , this involves designing gradientbased ( Sundararajan et al. , 2017 ; Denil et al. , 2014 ; Lundberg and Lee , 2017 ; Li et al. , 2015 ) or perturbation - based ( Li et al. , 2016 ; Poerner et al. , 2018 ; Kádár et al. , 2017 ) AAs .
+However , attribution algorithms can not be optimized and tend to be compute - intensive ( often requiring multiple LM forward / backward passes ) .
+Recently , Ismail et al. ( 2021 ) addressed the optimization issue by regularizing the task model to yield faithful rationales via the AA , while other works ( Situ et al. , 2021 ; Schwarzenberg et al. , 2021 ) addressed the compute cost issue by training an LM ( requiring only one forward pass ) to mimic an AA ’s behavior .
+Another line of work aims to produce faithful rationales by construction , via SPPs ( Jain et al. , 2020 ; Yu et al. , 2021 ; Paranjape et al. , 2020 ; Bastings et al. , 2019 ; Yu et al. , 2019 ; Lei et al. , 2016 ) .
+Still , SPPs ’ faithfulness can only guarantee sufficiency – not comprehensiveness ( DeYoung et al. , 2019 ) .
+Also , SPPs generally perform worse than vanilla LMs because they hide much of the original text input from the predictor and are hard to train end - to - end .
+Plausibility Existing approaches for improving extractive rationale plausibility typically involve supervising LM - based extractors ( Bhat et al. , 2021 ) or SPPs ( Jain et al. , 2020 ; Paranjape et al. , 2020 ; DeYoung et al. , 2019 ) with gold rationales .
+However , existing LM - based extractors have not been trained for faithfulness , while SPPs ’ faithfulness by construction comes at the great cost of task performance .
+Meanwhile , more existing works focus on improving the plausibility of free - text rationales ( Narang et al. , 2020 ; Lakhotia et al. , 2020 ; Camburu et al. , 2018 ) , often with task - specific pipelines ( Rajani et al. , 2019 ; Kumar and Talukdar , 2020 ) .
+Connection to UNIREX Unlike prior works , 59  UNIREX enables both the task model and rationale extractor to be jointly optimized for faithfulness , plausibility , and task performance .
+As a result , UNIREX - trained rationale extractors achieve a better balance of faithfulness and plausibility , without compromising the task model ’s performance .
+Also , by using a learned rationale extractor , which generally only requires one model forward pass , UNIREX does not have the computational expenses that limit many AAs .
+Jay DeYoung , Sarthak Jain , Nazneen Fatema Rajani , Eric Lehman , Caiming Xiong , Richard Socher , and Byron C Wallace .
+2019 .
+Eraser : A benchmark to evaluate rationalized nlp models .
+arXiv preprint arXiv:1911.03429 .
+Finale Doshi - Velez and Been Kim .
+2017 .
+Towards a rigorous science of interpretable machine learning .
+arXiv preprint arXiv:1702.08608 .
+William Falcon and The PyTorch Lightning team .
+2019 .
+PyTorch Lightning .
+Joseph L Fleiss . 1971 .
+Measuring nominal scale agreement among many raters .
+Psychological bulletin , 76(5):378 .
+References Jasmijn Bastings , Wilker Aziz , and Ivan Titov . 2019 .
+Interpretable neural predictions with differentiable binary variables .
+arXiv preprint arXiv:1905.08160 .
+Peter Hase and Mohit Bansal . 2020 .
+Evaluating explainable ai : Which algorithmic explanations help users predict model behavior ?
+arXiv preprint arXiv:2005.01831 .
+Jasmijn Bastings and Katja Filippova . 2020 .
+The elephant in the interpretability room : Why use attention as explanation when we have saliency methods ?
+arXiv preprint arXiv:2010.05607 .
+Sara Hooker , Dumitru Erhan , Pieter - Jan Kindermans , and Been Kim . 2018 .
+A benchmark for interpretability methods in deep neural networks .
+arXiv preprint arXiv:1806.10758 .
+Emily M Bender , Timnit Gebru , Angelina McMillanMajor , and Shmargaret Shmitchell .
+2021 .
+On the dangers of stochastic parrots : Can language models be too big ? .
+In Proceedings of the 2021 ACM Conference on Fairness , Accountability , and Transparency , pages 610–623 .
+Aya Abdelsalam Ismail , Hector Corrada Bravo , and Soheil Feizi .
+2021 .
+Improving deep learning interpretability by saliency guided training .
+Advances in Neural Information Processing Systems , 34 .
+Meghana Moorthy Bhat , Alessandro Sordoni , and Subhabrata Mukherjee . 2021 .
+Self - training with few - shot rationalization : Teacher explanations aid student in few - shot nlu .
+arXiv preprint arXiv:2109.08259 .
+Alon Jacovi and Yoav Goldberg . 2020 .
+Towards faithfully interpretable nlp systems : How should we define and evaluate faithfulness ?
+arXiv preprint arXiv:2004.03685 .
+Oana - Maria Camburu , Tim Rocktäschel , Thomas Lukasiewicz , and Phil Blunsom . 2018 .
+e - snli : Natural language inference with natural language explanations .
+arXiv preprint arXiv:1812.01193 .
+Sarthak Jain , Sarah Wiegreffe , Yuval Pinter , and Byron C Wallace . 2020 .
+Learning to faithfully rationalize by construction .
+arXiv preprint arXiv:2005.00115 .
+Samuel Carton , Anirudh Rathore , and Chenhao Tan . 2020 .
+Evaluating and characterizing human rationales .
+arXiv preprint arXiv:2010.04736 .
+Akos Kádár , Grzegorz Chrupała , and Afra Alishahi .
+2017 .
+Representation of linguistic form and function in recurrent neural networks .
+Computational Linguistics , 43(4):761–780 .
+Aaron Chan , Jiashu Xu , Boyuan Long , Soumya Sanyal , Tanishq Gupta , and Xiang Ren . 2021 .
+Salkg : Learning from knowledge graph explanations for commonsense reasoning .
+Advances in Neural Information Processing Systems , 34 .
+Daniel Khashabi , Snigdha Chaturvedi , Michael Roth , Shyam Upadhyay , and Dan Roth . 2018 .
+Looking beyond the surface : A challenge set for reading comprehension over multiple sentences .
+In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies , Volume 1 ( Long Papers ) , pages 252–262 .
+Ona de Gibert , Naiara Perez , Aitor García - Pablos , and Montse Cuadros . 2018 .
+Hate speech dataset from a white supremacy forum .
+arXiv preprint arXiv:1809.04444 .
+Sawan Kumar and Partha Talukdar . 2020 .
+Nile : Natural language inference with faithful natural language explanations .
+arXiv preprint arXiv:2005.12116 .
+Misha Denil , Alban Demiraj , and Nando De Freitas . 2014 .
+Extraction of salient sentences from labelled documents .
+arXiv preprint arXiv:1412.6815 .
+Kushal Lakhotia , Bhargavi Paranjape , Asish Ghoshal , Wen - tau Yih , Yashar Mehdad , and Srinivasan Iyer . 2020 .
+Fid - ex : Improving sequence - to - sequence models for extractive rationale generation .
+arXiv preprint arXiv:2012.15482 .
+Jacob Devlin , Ming - Wei Chang , Kenton Lee , and Kristina Toutanova . 2018 .
+Bert : Pre - training of deep bidirectional transformers for language understanding .
+arXiv preprint arXiv:1810.04805 .
+60  Tao Lei , Regina Barzilay , and Tommi Jaakkola .
+2016 .
+Rationalizing neural predictions .
+arXiv preprint arXiv:1606.04155 .
+Nina Poerner , Benjamin Roth , and Hinrich Schütze . 2018 .
+Evaluating neural network explanation methods using hybrid documents and morphological agreement .
+arXiv preprint arXiv:1801.06422 .
+Jiwei Li , Xinlei Chen , Eduard Hovy , and Dan Jurafsky . 2015 .
+Visualizing and understanding neural models in nlp .
+arXiv preprint arXiv:1506.01066 .
+Danish Pruthi , Bhuwan Dhingra , Livio Baldini Soares , Michael Collins , Zachary C Lipton , Graham Neubig , and William W Cohen . 2020 .
+Evaluating explanations : How much do explanations from the teacher aid students ?
+arXiv preprint arXiv:2012.00893 .
+Jiwei Li , Will Monroe , and Dan Jurafsky .
+2016 .
+Understanding neural networks through representation erasure .
+arXiv preprint arXiv:1612.08220 .
+Nazneen Fatema Rajani , Bryan McCann , Caiming Xiong , and Richard Socher .
+2019 .
+Explain yourself !
+leveraging language models for commonsense reasoning .
+arXiv preprint arXiv:1906.02361 .
+Zachary C Lipton . 2018 .
+The mythos of model interpretability : In machine learning , the concept of interpretability is both important and slippery .
+Queue , 16(3):31–57 .
+Cynthia Rudin . 2019 .
+Stop explaining black box machine learning models for high stakes decisions and use interpretable models instead .
+Nature Machine Intelligence , 1(5):206–215 .
+Yinhan Liu , Myle Ott , Naman Goyal , Jingfei Du , Mandar Joshi , Danqi Chen , Omer Levy , Mike Lewis , Luke Zettlemoyer , and Veselin Stoyanov . 2019 .
+Roberta : A robustly optimized bert pretraining approach .
+arXiv preprint arXiv:1907.11692 .
+Robert Schwarzenberg , Nils Feldhus , and Sebastian Möller . 2021 .
+Efficient explanations from empirical explainers .
+arXiv preprint arXiv:2103.15429 .
+Scott M Lundberg and Su - In Lee . 2017 .
+A unified approach to interpreting model predictions .
+In Proceedings of the 31st international conference on neural information processing systems , pages 4768–4777 .
+Avanti Shrikumar , Peyton Greenside , and Anshul Kundaje .
+2017 .
+Learning important features through propagating activation differences .
+In International Conference on Machine Learning , pages 3145–3153 .
+PMLR .
+Siwen Luo , Hamish Ivison , Caren Han , and Josiah Poon . 2021 .
+Local interpretations for explainable natural language processing : A survey .
+arXiv preprint arXiv:2103.11072 .
+Karen Simonyan , Andrea Vedaldi , and Andrew Zisserman .
+2013 .
+Deep inside convolutional networks : Visualising image classification models and saliency maps .
+arXiv preprint arXiv:1312.6034 .
+Julian McAuley and Jure Leskovec .
+2013 .
+Hidden factors and hidden topics : understanding rating dimensions with review text .
+In Proceedings of the 7th ACM conference on Recommender systems , pages 165–172 .
+Xuelin Situ , Ingrid Zukerman , Cecile Paris , Sameen Maruf , and Gholamreza Haffari . 2021 .
+Learning to explain : Generating stable explanations fast .
+In Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing ( Volume 1 : Long Papers ) , pages 5340 – 5355 .
+Shervin Minaee , Nal Kalchbrenner , Erik Cambria , Narjes Nikzad , Meysam Chenaghlu , and Jianfeng Gao .
+2021 .
+Deep learning – based text classification : A comprehensive review .
+ACM Computing Surveys ( CSUR ) , 54(3):1–40 .
+Richard Socher , Alex Perelygin , Jean Wu , Jason Chuang , Christopher D Manning , Andrew Y Ng , and Christopher Potts . 2013 .
+Recursive deep models for semantic compositionality over a sentiment treebank .
+In Proceedings of the 2013 conference on empirical methods in natural language processing , pages 1631–1642 .
+Sharan Narang , Colin Raffel , Katherine Lee , Adam Roberts , Noah Fiedel , and Karishma Malkan . 2020 .
+Wt5 ? !
+training text - to - text models to explain their predictions .
+arXiv preprint arXiv:2004.14546 .
+Bhargavi Paranjape , Mandar Joshi , John Thickstun , Hannaneh Hajishirzi , and Luke Zettlemoyer .
+2020 .
+An information bottleneck approach for controlling conciseness in rationale extraction .
+arXiv preprint arXiv:2005.00652 .
+Julia Strout , Ye Zhang , and Raymond J Mooney . 2019 .
+Do human rationales improve machine explanations ?
+arXiv preprint arXiv:1905.13714 .
+Mukund Sundararajan , Ankur Taly , and Qiqi Yan .
+2017 .
+Axiomatic attribution for deep networks .
+In International Conference on Machine Learning , pages 3319–3328 .
+PMLR .
+Adam Paszke , Sam Gross , Francisco Massa , Adam Lerer , James Bradbury , Gregory Chanan , Trevor Killeen , Zeming Lin , Natalia Gimelshein , Luca Antiga , et al. 2019 .
+Pytorch : An imperative style , high - performance deep learning library .
+Advances in neural information processing systems , 32:8026 – 8037 .
+Alon Talmor , Jonathan Herzig , Nicholas Lourie , and Jonathan Berant .
+2018 .
+Commonsenseqa : A question answering challenge targeting commonsense knowledge .
+arXiv preprint arXiv:1811.00937 .
+61  Cynthia Van Hee , Els Lefever , and Véronique Hoste . 2018 .
+Semeval-2018 task 3 : Irony detection in english tweets .
+In Proceedings of The 12th International Workshop on Semantic Evaluation , pages 39 – 50 .
+A Appendix A.1 Text Classification
+Here , we formalize the text classification problem in more detail .
+Let D = { X , Y}N i=1 be a dataset , where X = { xi } N are the text inputs , i=1 ∗
+N Y = { yi } i=1 are the labels , and N is the number of instances ( xi , yi∗ ) in D. We also assume D can be partitioned into train set Dtrain , dev set Ddev , and test set Dtest .
+Let Ftask = ftask ( fenc ( · ) ) be a task LM , where fenc is the text encoder , and ftask is the task output head .
+Typically , Ftask has a BERT - style architecture ( Devlin et al. , 2018 ) , in which fenc is a Transformer ( Vaswani et al. , 2017 ) while ftask is a linear layer .
+Below , we define the sequence classification ( SST , Movies , MultiRC , e - SNLI ) and multi - choice QA ( CoS - E ) tasks , which are different types of text classification .
+Ashish Vaswani , Noam Shazeer , Niki Parmar , Jakob Uszkoreit , Llion Jones , Aidan N Gomez , Łukasz Kaiser , and Illia Polosukhin .
+2017 .
+Attention is all you need .
+In Advances in neural information processing systems , pages 5998–6008 .
+Thomas Wolf , Lysandre Debut , Victor Sanh , Julien Chaumond , Clement Delangue , Anthony Moi , Pierric Cistac , Tim Rault , Rémi Louf , Morgan Funtowicz , et al. 2019 .
+Huggingface ’s transformers : State - ofthe - art natural language processing .
+arXiv preprint arXiv:1910.03771 .
+Qinyuan Ye , Bill Yuchen Lin , and Xiang Ren . 2021 .
+Crossfit :
+A few - shot learning challenge for cross - task generalization in nlp .
+arXiv preprint arXiv:2104.08835 .
+Mo Yu , Shiyu Chang , Yang Zhang , and Tommi S Jaakkola .
+2019 .
+Rethinking cooperative rationalization : Introspective extraction and complement control .
+arXiv preprint arXiv:1910.13294 .
+Sequence Classification
+In sequence classification , xi is a token sequence ( e.g. , a single sentence , a pair of sentences ) , while yi∗ is the target class for xi .
+Here , we assume a fixed label space Y = { 1 , ... , M } of size M , where yi∗ ∈ Y for all i.
+Thus , ftask outputs a vector of size M , such that Ftask ( xi ) =
+ftask ( fenc ( xi ) ) =
+ŷi ∈ RM is the logit vector used to classify xi .
+Given ŷi = [ ŷi , j ] M j=1 , let yi = arg max j ŷi , j be the class predicted by Ftask .
+The goal of sequence classification is to learn Ftask such that yi∗ = yi , for all ( xi , yi∗ ) ( Minaee et al. , 2021 ) .
+Mo Yu , Yang Zhang , Shiyu Chang , and Tommi Jaakkola .
+2021 .
+Understanding interlocking dynamics of cooperative rationalization .
+Advances in Neural Information Processing Systems , 34 .
+Manzil Zaheer , Guru Guruganesh , Kumar Avinava Dubey , Joshua Ainslie , Chris Alberti , Santiago Ontanon , Philip Pham , Anirudh Ravula , Qifan Wang , Li Yang , et al. 2020 .
+Big bird :
+Transformers for longer sequences .
+In NeurIPS .
+Omar Zaidan and Jason Eisner . 2008 .
+Modeling annotators : A generative approach to learning from annotator rationales .
+In Proceedings of the 2008 conference on Empirical methods in natural language processing , pages 31–40 .
+Multi - Choice QA Instead of a fixed label space , multi - choice QA has a different ( but fixed - size ) set of answer choices per instance .
+For instance i , let qi be the question ( e.g. , “ A friend is greeting me , what would they say ? ” ) and Ai = { ai , j } M j=1 be the corresponding answer choices ( e.g. , { “ say hello ” , “ greet ” , “ associate ” , “ socialize ” , “ smile ” } ) , where M is now the number of answer choices .
+Define xi , j = qi ⊕ ai , j , where ⊕ denotes concatenation .
+In multi - choice QA , we ∗ have xi = { xi , j } M j=1 , while yi ∈
+Ai is the correct answer for xi .
+Thus , ftask outputs a scalar , such that Ftask ( xi , j ) =
+ftask ( fenc ( xi , j ) ) = ŷi , j ∈ R is the logit for xi , j .
+Given ŷi = [ ŷi , j ] M j=1 , let j ′ = arg max j ŷi , j , where yi = ai , j ′ is the answer predicted by Ftask .
+The goal of multi - choice QA is to learn Ftask such that yi∗ = yi , for all ( xi , yi∗ ) ( Talmor et al. , 2018 ) .
+Marcos Zampieri , Shervin Malmasi , Preslav Nakov , Sara Rosenthal , Noura Farra , and Ritesh Kumar . 2019 .
+Semeval-2019 task 6 : Identifying and categorizing offensive language in social media ( offenseval ) .
+arXiv preprint arXiv:1903.08983 .
+Xiang Zhang , Junbo Zhao , and Yann LeCun . 2015 .
+Character - level Convolutional Networks for Text Classification .
+arXiv:1509.01626
+[ cs ] .
+62  A.2 Heuristic Rationale Extractors train instances , bgold with gold rationales and the rest without .
+Since Ngold is generally small , we only sample from Dgold without replacement for a given batch , but not a given epoch .
+Thus , instances from Dgold may appear more than once in the same epoch .
+However , we do sample from Dtrain \Dgold without replacement for each batch and epoch , so every instance in Dtrain \Dgold appears exactly once per epoch .
+After constructing the batch , we compute the plausibility loss for the batch as folPb ∗ lows : 1 i=1 ( xi , yi∗ )
+∈Dgold Lplaus ( Fext ( xi ) , ri ) , where Lplaus is the plausibility loss for train instance ( xi , yi∗ ) .
+This function zeroes out the plausibility loss for instances without gold rationales , so that plausibility is only being optimized with respect to instances with gold rationales .
+However , in Sec .
+? ? , we show that it is possible to achieve high plausibility via rationale extractors trained on minimal gold rationale supervision .
+A heuristic Ftask is an AA , which can be any handcrafted function that calculates an importance score sti for each input token xti ( Bastings and Filippova , 2020 ) .
+AAs are typically gradient - based ( Sundararajan et al. , 2017 ; Denil et al. , 2014 ; Lundberg and Lee , 2017 ; Li et al. , 2015 ) or perturbationbased ( Li et al. , 2016 ; Poerner et al. , 2018 ; Kádár et al. , 2017 ) methods .
+Gradient - based methods compute sti via the gradient of Ftask ’s output ŷi w.r.t . xti , via one or more Ftask backward passes .
+Perturbation - based methods measure sti as ŷi ’s change when perturbing ( e.g. , removing ) xti , via multiple Ftask forward passes .
+AAs can be used out of the box without training and are designed to satisfy certain faithfulnessrelated axiomatic properties ( Sundararajan et al. , 2017 ; Lundberg and Lee , 2017 ) .
+However , AAs ’ lack of learnable parameters means they can not be optimized for faithfulness / plausibility .
+Thus , if Ftask is trained for explainability using AA - based rationales , then only Ftask is optimized .
+Also , faithful AAs tend to be compute - intensive , requiring many Ftask backward / forward passes per instance ( Sundararajan et al. , 2017 ; Lundberg and Lee , 2017 ; Li et al. , 2016 ) .
+A.4 A.4.1 Explainability Objectives Faithfulness Sufficiency
+In addition , to the criteria presented in Sec . 3.2 , we consider two other sufficiency loss functions .
+The first is the KL divergence criterion used in ( Ismail et al. , 2021 ) , which considers the entire label distribution and is defined as Lsuff - KL = ( k ) KL(Ftask ( ri ) )
+||
+Ftask ( xi ) ) .
+The second is the mean absolute error ( MAE ) criterion , which is ( k ) defined as Lsuff - MAE = |LCE ( Ftask ( ri ) ) , yi∗ ) − LCE ( Ftask ( xi ) , yi∗ ) | .
+Unlike the difference criterion Lsuff - diff and margin criterion Lsuff - margin ( Sec . 3.2 ) , ( k ) the MAE criterion assumes that using ri as input should not yield better task performance than using xi as input .
+In our experiments , we find that Lsuff - margin is effective , though others ( e.g. , KL divergence , MAE ) can be used too .
+A.3 Gold Rationale Supervision
+If a learned rationale extractor is chosen , UNIREX enables users to specify how much gold rationale supervision to use .
+Ideally , each train instance would be annotated with a gold rationale .
+In this case , we could directly minimize the plausibility loss for each train instance .
+However , since gold rationales can be expensive to annotate , UNIREX provides a special batching procedure for training with limited gold rationale supervision .
+Given Ntrain =
+|Dtrain | train instances , let 0
+< γ < 100 be the percentage of train instances with γ gold rationales , Ngold = ⌈ 100
+Ntrain ⌉ ≥ 1 be the number of train instances with gold rationales , b be the desired train batch size , and β > 1 be a scaling factor .
+Define Dgold ⊆
+Dtrain as the set of train instances with gold rationales , where |Dgold | = Ngold .
+Note that , if all train instances have gold rationales , then Dgold = Dtrain and γ = 100 .
+Each batch is constructed as follows : ( 1 ) randomly sample bgold = max(1 , βb ) instances from Dgold without replacement , then ( 2 ) randomly sample b − bgold instances from Dtrain \Dgold without replacement .
+This results in a batch with b total A.4.2 63 Plausibility Similar to faithfulness , UNIREX places no restrictions on the choice of plausibility objective .
+As described in Sec . 3.2 , given gold rationale r∗i for input xi , plausibility optimization entails training Fext to predict binary importance label r∗,t i for each token xti .
+This is essentially binary token classification , so one natural choice for Lplaus is the token - level binary P cross - entropy ( BCE ) critet rion : Lplaus - BCE = − t r∗,t
+i log(Fext ( xi ) )
+( Sec . 3.2 ) .
+Another option is the sequence - level KL divergence criterion , which is defined as : Lplaus - KL =  KL(Fext ( xi ) || r∗i ) .
+Additionally , we can directly penalize Fext ( xi ) in the logit space via a linear loss , defined as : Lplaus - linear = Φ(r∗i )
+Fext ( xi ) , where Φ(u ) =
+−2u + 1 maps positive and negative tokens to −1 and +1 , respectively .
+The linear loss directly pushes the logits corresponding to positive / negative tokens to be higher / lower and increase the margin between them .
+To prevent linear loss values from becoming arbitrarily negative , we can also lower bound the loss with a margin mp , yielding : Lplaus - linear - margin = max(−mp , Lplaus - linear )
++ mp . creases .
+Interestingly , UNIREX ( AA - FP ) yields a noticeable dip in AUPRC for lower γ values .
+Since AA - FP has limited capacity ( via the task model ) for plausibility optimization , it is possible that this fluctuation is due to random noise .
+We leave further analysis of this for future work .
+A.5 Implementation Details LM Architecture
+While many prior works use BERT ( Devlin et al. , 2018 ) Transformer LMs , BERT is limited to having sequences with up to 512 tokens , which is problematic since many datasets ( e.g. , Movies ) contain much longer sequences .
+Meanwhile , BigBird ( Zaheer et al. , 2020 ) is a state - of - the - art Transformer LM designed to handle long input sequences with up to 4096 tokens .
+Thus , we use BigBird - Base , which is initialized with RoBERTa - Base ( Liu et al. , 2019 ) , in all of our experiments ( i.e. , both baselines and UNIREX ) .
+We obtain the pre - trained BigBird - Base model from the Hugging Face Transformers library ( Wolf et al. , 2019 ) .
+Note that UNIREX is agnostic to the choice of LM architecture , so RNNs , CNNs , and other Transformer LMs are also supported by UNIREX .
+However , we leave exploration of other LM architectures for future work .
+Figure 8 : Gold Rationale Data Efficiency on CoS - E. A.7
+Additional Empirical Results In this subsection , we present additional results from our experiments .
+Besides the aggregated results shown in Sec . 4 of the main text , Tables 4 - 10 contain more detailed results , using both raw and NRG metrics .
+Specifically , Tables 4 - 8 show all raw / NRG results for each dataset , Table 9 shows the ablation results for all raw metrics , and Table 10 includes the zero - shot explainability transfer results for UNIREX ( SLM - FP ) .
+Generally , the computation of NRG should involve globally aggregating the raw metrics for all available methods , as done in the main results .
+However , for a number of more focused experiments ( Tables 9 - 10 ) , only a subset of the available methods are considered .
+Thus , to make the faithfulness results in Tables 9 - 10 easier to digest , we introduce a metric called Comp - Suff Difference ( CSD ) , which locally aggregates comp and suff as : CSD = comp − suff .
+Therefore , since higher / lower comp / suff signal higher faithfulness , then higher CSD signals higher faithfulness .
+Training Building upon Sec .
+? ? , we discuss additional training details here .
+We find that αc = 0.5 and αs = 0.5 are usually best .
+For the batching factor β ( Sec . A.3 ) , we use 2 .
+For model selection , we choose the model with the best dev performance averaged over three seeds .
+We can also perform model selection based on dev explainability metrics , but we leave this extended tuning for future work .
+All experiments are implemented using PyTorch - Lightning ( Paszke et al. , 2019 ; Falcon and The PyTorch Lightning team , 2019 ) .
+A.6 Gold Rationale Data Efficiency Fig . ? ?
+shows the gold rationale data efficiency results for CoS - E , using the same setup as Sec . ? ? .
+Overall , we see that the CoS - E results are quite similar to the SST results .
+Again , UNIREX ( DLMFP ) and UNIREX ( SLM - FP ) dominate across all γ values , with AUPRC slowly decreasing as γ de64  Method Composite Faithfulness Plausibility Performance NRG ( ↑ ) NRG ( ↑ ) Comp ( ↑ ) Suff ( ↓ ) NRG ( ↑ ) AUPRC ( ↑ ) TF1 ( ↑ ) NRG ( ↑ ) Acc ( ↑ ) AA ( Grad ) AA ( Input*Grad ) AA ( DeepLIFT ) AA ( IG ) L2E SGT FRESH A2R UNIREX ( AA - F ) 0.488 0.420 0.453 0.526 0.557 0.632 0.330 0.479 0.639 0.337 0.107 0.122 0.297 0.487 0.555 0.837 0.941 0.706 0.142 ( ±0.010 ) 0.078 ( ±0.013 ) 0.085 ( ±0.006 ) 0.119 ( ±0.009 ) 0.012 ( ±0.004 ) 0.147 ( ±0.024 ) 0.219 ( ±0.057 ) 0.283 ( ±0.104 ) 0.292 ( ±0.051 ) 0.256 ( ±0.006 ) 0.342 ( ±0.014 ) 0.340 ( ±0.018 ) 0.258 ( ±0.031 ) 0.009 ( ±0.024 ) 0.113 ( ±0.031 ) 0.000 ( ±0.000 ) 0.000 ( ±0.000 ) 0.171 ( ±0.038 ) 0.192 0.218 0.302 0.347 0.250 0.371 0.152 0.457 0.329 58.86 ( ±3.65 ) 44.16 ( ±1.43 ) 46.50 ( ±1.32 ) 49.94 ( ±1.77 ) 44.84 ( ±0.32 ) 51.38 ( ±2.47 ) 42.06 ( ±8.84 ) 63.36 ( ±6.01 ) 48.13 ( ±1.14 ) 27.40 ( ±0.00 ) 45.02 ( ±0.39 ) 50.18 ( ±0.32 ) 50.75 ( ±0.54 ) 47.24 ( ±0.87 ) 51.35 ( ±1.64 ) 41.19 ( ±4.01 ) 46.74 ( ±6.65 ) 50.96 ( ±0.93 ) 0.935 0.935 0.935 0.935 0.935 0.971 0.000 0.038 0.882 93.81 ( ±0.55 ) 93.81 ( ±0.55 ) 93.81 ( ±0.55 ) 93.81 ( ±0.55 ) 93.81 ( ±0.55 ) 94.40 ( ±0.57 ) 78.78 ( ±6.48 ) 79.39 ( ±11.67 ) 92.97 ( ±0.44 ) SGT+P FRESH+P A2R+P UNIREX ( DLM - P ) UNIREX ( AA - FP ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 0.596 0.426 0.695 0.770 0.636 0.897 0.891 0.507 0.765 0.953 0.339 0.339 0.756 0.807 0.139 ( ±0.032 ) 0.175 ( ±0.043 ) 0.290 ( ±0.016 ) 0.142 ( ±0.008 ) 0.296 ( ±0.067 ) 0.319 ( ±0.090 ) 0.302 ( ±0.039 ) 0.137 ( ±0.026 ) 0.000 ( ±0.000 ) 0.000 ( ±0.000 ) 0.255 ( ±0.007 ) 0.185 ( ±0.048 ) 0.167 ( ±0.036 ) 0.113 ( ±0.013 ) 0.355 0.503 0.978 0.970 0.315 1.000 0.940 50.38 ( ±1.45 ) 60.87 ( ±9.83 ) 85.56 ( ±1.01 ) 84.35 ( ±0.87 ) 47.60 ( ±2.44 ) 85.80 ( ±0.74 ) 82.55 ( ±0.84 ) 50.98 ( ±0.46 ) 53.55 ( ±8.27 ) 70.97 ( ±1.03 ) 71.54 ( ±0.53 ) 50.23 ( ±2.26 ) 72.76 ( ±0.19 ) 70.65 ( ±0.44 ) 0.928 0.011 0.154 1.000 0.900 0.935 0.927 93.70 ( ±0.88 ) 78.95 ( ±5.18 ) 81.26 ( ±0.52 ) 94.86 ( ±0.41 ) 93.25 ( ±0.45 ) 93.81 ( ±0.54 ) 93.68 ( ±0.67 ) Table 4 : Main Results on SST .
+Method Composite Faithfulness Plausibility Performance NRG ( ↑ ) NRG ( ↑ ) Comp ( ↑ ) Suff ( ↓ ) NRG ( ↑ ) AUPRC ( ↑ ) TF1 ( ↑ ) NRG ( ↑ ) F1 ( ↑ ) AA ( Grad ) AA ( Input*Grad ) AA ( DeepLIFT ) AA ( IG ) L2E
+SGT FRESH A2R UNIREX ( AA - F ) 0.481 0.503 0.468 0.439 0.550 0.553 0.645 0.431 0.601 0.457 0.359 0.259 0.173 0.445 0.474 0.732 0.764 0.744 0.184 ( ±0.023 ) 0.148 ( ±0.031 ) 0.122 ( ±0.029 ) 0.134 ( ±0.016 ) 0.000 ( ±0.007 ) 0.124 ( ±0.053 ) 0.234 ( ±0.034 ) 0.267 ( ±0.050 ) 0.505 ( ±0.134 ) 0.107 ( ±0.017 ) 0.137 ( ±0.019 ) 0.172 ( ±0.022 ) 0.219 ( ±0.044 ) 0.026 ( ±0.015 ) 0.071 ( ±0.064 ) 0.000 ( ±0.000 ) 0.000 ( ±0.000 ) 0.122 ( ±0.100 ) 0.028 0.194 0.187 0.188 0.248 0.184 0.305 0.244 0.189 13.31 ( ±0.91 ) 8.68 ( ±0.37 ) 9.00 ( ±0.16 ) 8.88 ( ±0.21 ) 16.68 ( ±10.20 ) 10.05 ( ±1.23 ) 17.02 ( ±6.22 ) 35.44 ( ±21.69 ) 9.14 ( ±2.51 ) 5.02 ( ±0.00 ) 37.58 ( ±0.55 ) 36.15 ( ±1.45 ) 36.39 ( ±1.29 ) 38.92 ( ±4.07 ) 34.64 ( ±1.67 ) 48.26 ( ±5.87 ) 19.78 ( ±25.56 ) 36.28 ( ±1.84 ) 0.957 0.957 0.957 0.957 0.957 1.000 0.899 0.284 0.870 95.33 ( ±0.65 ) 95.33 ( ±0.65 ) 95.33 ( ±0.65 ) 95.33 ( ±0.65 ) 95.33 ( ±0.65 ) 96.33 ( ±0.76 ) 94.00 ( ±1.44 ) 79.78 ( ±7.14 ) 93.33 ( ±1.61 ) SGT+P FRESH+P A2R+P UNIREX ( DLM - P ) UNIREX ( AA - FP ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 0.586 0.491 0.585 0.667 0.543 0.744 0.754 0.604 0.691 0.764 0.024 0.514 0.326 0.362 0.152 ( ±0.013 ) 0.193 ( ±0.062 ) 0.267 ( ±0.076 ) 0.024 ( ±0.003 ) 0.428 ( ±0.174 ) 0.283 ( ±0.217 ) 0.313 ( ±0.059 ) 0.022 ( ±0.004 ) 0.000 ( ±0.000 ) 0.000 ( ±0.000 ) 0.238 ( ±0.004 ) 0.195 ( ±0.105 ) 0.216 ( ±0.005 ) 0.213 ( ±0.014 ) 0.183 0.710 0.991 1.000 0.193 0.991 0.965 9.16 ( ±1.59 ) 65.78 ( ±11.16 ) 93.53 ( ±0.93 ) 94.32 ( ±0.12 ) 8.53 ( ±0.46 ) 93.65 ( ±0.36 ) 91.70 ( ±1.84 ) 35.33 ( ±0.41 ) 68.70 ( ±15.78 ) 88.77 ( ±1.22 ) 89.53 ( ±1.63 ) 37.71 ( ±3.12 ) 88.68 ( ±2.29 ) 86.17 ( ±1.20 ) 0.971 0.070 0.000 0.978 0.921 0.913 0.935 95.66 ( ±1.16 ) 74.84 ( ±12.22 ) 73.22 ( ±0.75 ) 95.83 ( ±0.29 ) 94.50 ( ±1.00 ) 94.33 ( ±1.61 ) 94.83 ( ±0.76 ) Table 5 : Main Results on Movies .
+Method Composite Faithfulness Plausibility Performance NRG ( ↑ ) NRG ( ↑ ) Comp ( ↑ ) Suff ( ↓ ) NRG ( ↑ ) AUPRC ( ↑ ) TF1 ( ↑ ) NRG ( ↑ ) Acc ( ↑ ) AA ( Grad ) AA ( Input*Grad ) AA ( DeepLIFT ) AA ( IG ) L2E SGT FRESH A2R UNIREX ( AA - F ) 0.537 0.573 0.605 0.578 0.544 0.618 0.302 0.277 0.690 0.504 0.361 0.346 0.327 0.493 0.367 0.546 0.516 0.538 0.331 ( ±0.012 ) 0.249 ( ±0.018 ) 0.254 ( ±0.035 ) 0.216 ( ±0.007 ) 0.005 ( ±0.003 ) 0.197 ( ±0.040 ) 0.037 ( ±0.036 ) 0.014 ( ±0.021 ) 0.297 ( ±0.141 ) 0.352 ( ±0.007 ) 0.385 ( ±0.008 ) 0.403 ( ±0.042 ) 0.378 ( ±0.010 ) 0.010 ( ±0.008 ) 0.324 ( ±0.015 ) 0.000 ( ±0.000 ) 0.000 ( ±0.000 ) 0.286 ( ±0.084 ) 0.130 0.383 0.491 0.429 0.161 0.491 0.261 0.282 0.554 37.33 ( ±0.62 ) 39.56 ( ±0.54 ) 42.82 ( ±1.83 ) 40.07 ( ±5.47 ) 23.56 ( ±1.09 ) 43.68 ( ±4.68 ) 32.35 ( ±7.66 ) 41.61 ( ±3.85 ) 46.97 ( ±3.41 ) 22.65 ( ±0.00 ) 44.43 ( ±0.40 ) 51.72 ( ±1.26 ) 48.34 ( ±3.16 ) 37.80 ( ±1.10 ) 51.00 ( ±3.05 ) 39.37 ( ±0.70 ) 33.12 ( ±9.06 ) 53.99 ( ±1.66 ) 0.977 0.977 0.977 0.977 0.977 0.995 0.101 0.032 0.978 63.56 ( ±1.27 ) 63.56 ( ±1.27 ) 63.56 ( ±1.27 ) 63.56 ( ±1.27 ) 63.56 ( ±1.27 ) 64.35 ( ±0.46 ) 24.81 ( ±3.46 ) 21.77 ( ±1.31 ) 63.58 ( ±0.61 ) SGT+P FRESH+P A2R+P UNIREX ( DLM - P ) UNIREX ( AA - FP ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 0.601 0.374 0.488 0.751 0.685 0.814 0.807 0.367 0.515 0.500 0.267 0.551 0.492 0.494 0.201 ( ±0.032 ) 0.013 ( ±0.021 ) 0.001 ( ±0.001 ) 0.180 ( ±0.016 ) 0.395 ( ±0.109 ) 0.293 ( ±0.043 ) 0.390 ( ±0.087 ) 0.328 ( ±0.022 ) 0.013 ( ±0.021 ) 0.000 ( ±0.000 ) 0.390 ( ±0.035 ) 0.381 ( ±0.101 ) 0.321 ( ±0.070 ) 0.424 ( ±0.110 ) 0.436 0.606 0.951 0.997 0.537 0.997 0.983 41.30 ( ±6.70 ) 53.40 ( ±12.87 ) 73.59 ( ±0.81 ) 76.07 ( ±1.63 ) 45.21 ( ±4.46 ) 76.38 ( ±0.57 ) 75.12 ( ±0.41 ) 47.95 ( ±1.65 ) 53.17 ( ±7.83 ) 67.63 ( ±1.54 ) 69.76 ( ±0.27 ) 53.91 ( ±3.23 ) 69.52 ( ±0.24 ) 69.25 ( ±0.41 ) 1.000 0.000 0.012 0.990 0.968 0.953 0.944 64.57 ( ±0.33 ) 20.36 ( ±0.66 ) 20.91 ( ±0.48 ) 64.13 ( ±0.46 ) 63.14 ( ±0.33 ) 62.50 ( ±1.34 ) 62.09 ( ±2.12 ) Table 6 : Main Results on CoS - E. 65  Method Composite Faithfulness Plausibility Performance NRG ( ↑ ) NRG ( ↑ ) Comp ( ↑ ) Suff ( ↓ ) NRG ( ↑ ) AUPRC ( ↑ ) TF1 ( ↑ ) NRG ( ↑ ) F1 ( ↑ ) AA ( Grad ) AA ( Input*Grad ) AA ( DeepLIFT ) AA ( IG ) L2E
+SGT FRESH A2R UNIREX ( AA - F ) 0.498 0.506 0.493 0.499 0.522 0.594 0.675 0.217 0.711 0.462 0.289 0.249 0.280 0.366 0.564 0.571 0.404 0.956 0.222 ( ±0.028 ) 0.225 ( ±0.048 ) 0.225 ( ±0.012 ) 0.162 ( ±0.086 ) 0.007 ( ±0.006 ) 0.214 ( ±0.105 ) 0.176 ( ±0.029 ) -0.010 ( ±0.029 ) 0.505 ( ±0.050 ) 0.120 ( ±0.018 ) 0.260 ( ±0.059 ) 0.292 ( ±0.014 ) 0.222 ( ±0.086 ) 0.042 ( ±0.024 ) 0.033 ( ±0.077 ) 0.000 ( ±0.000 ) 0.000 ( ±0.000 ) -0.071 ( ±0.020 ) 0.035 0.231 0.234 0.220 0.205 0.224 0.617 0.249 0.236 22.27 ( ±0.17 ) 18.51 ( ±0.23 ) 18.80 ( ±0.19 ) 18.71 ( ±0.40 ) 24.48 ( ±2.71 ) 18.60 ( ±0.42 ) 24.68 ( ±7.98 ) 18.72 ( ±0.67 ) 18.82 ( ±0.40 ) 13.81 ( ±0.00 ) 43.45 ( ±0.05 ) 43.51 ( ±0.04 ) 41.79 ( ±1.33 ) 32.63 ( ±6.12 ) 42.42 ( ±0.51 ) 48.02 ( ±3.04 ) 45.45 ( ±0.02 ) 43.68 ( ±0.38 ) 0.997 0.997 0.997 0.997 0.997 0.995 0.838 0.000 0.939 69.80 ( ±0.60 ) 69.80 ( ±0.60 ) 69.80 ( ±0.60 ) 69.80 ( ±0.60 ) 69.80 ( ±0.60 ) 69.73 ( ±0.13 ) 64.47 ( ±3.41 ) 36.39 ( ±0.00 ) 66.17 ( ±4.58 ) SGT+P FRESH+P A2R+P UNIREX ( DLM - P ) UNIREX ( AA - FP ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 0.630 0.404 0.516 0.708 0.706 0.751 0.784 0.665 0.413 0.422 0.123 1.000 0.327 0.377 0.280 ( ±0.029 ) 0.000 ( ±0.013 ) 0.011 ( ±0.024 ) 0.127 ( ±0.010 ) 0.545 ( ±0.045 ) 0.135 ( ±0.072 ) 0.198 ( ±0.038 ) 0.283 ( ±0.039 ) 0.000 ( ±0.000 ) 0.000 ( ±0.000 ) 0.322 ( ±0.017 ) -0.077 ( ±0.099 ) 0.165 ( ±0.029 ) 0.171 ( ±0.027 ) 0.226 0.739 0.977 0.999 0.231 0.998 0.997 18.63 ( ±0.52 ) 55.87 ( ±10.13 ) 70.86 ( ±1.30 ) 71.80 ( ±0.27 ) 19.13 ( ±0.71 ) 71.89 ( ±0.41 ) 71.69 ( ±0.21 ) 42.71 ( ±0.39 ) 63.70 ( ±9.58 ) 76.21 ( ±1.68 ) 77.94 ( ±0.57 ) 42.66 ( ±1.18 ) 77.63 ( ±0.62 ) 77.79 ( ±0.09 ) 1.000 0.060 0.150 1.000 0.888 0.929 0.979 69.91 ( ±0.81 ) 38.41 ( ±5.34 ) 41.42 ( ±8.73 ) 69.91 ( ±0.76 ) 66.17 ( ±4.58 ) 67.53 ( ±1.06 ) 69.20 ( ±1.58 ) Table 7 : Main Results on MultiRC .
+Method Composite Faithfulness Plausibility Performance NRG ( ↑ ) NRG ( ↑ ) Comp ( ↑ ) Suff ( ↓ ) NRG ( ↑ ) AUPRC ( ↑ ) TF1 ( ↑ ) NRG ( ↑ ) F1 ( ↑ ) AA ( Grad ) AA ( Input*Grad ) AA ( DeepLIFT ) AA ( IG ) L2E
+SGT FRESH A2R UNIREX ( AA - F ) 0.587 0.503 0.508 0.596 0.606 0.595 0.518 0.273 0.622 0.518 0.287 0.270 0.473 0.460 0.503 0.661 0.564 0.539 0.313 ( ±0.009 ) 0.205 ( ±0.005 ) 0.195 ( ±0.012 ) 0.308 ( ±0.011 ) 0.009 ( ±0.015 ) 0.288 ( ±0.025 ) 0.120 ( ±0.075 ) 0.053 ( ±0.048 ) 0.330 ( ±0.018 ) 0.380 ( ±0.025 ) 0.446 ( ±0.020 ) 0.448 ( ±0.014 ) 0.414 ( ±0.020 ) 0.036 ( ±0.022 ) 0.361 ( ±0.038 ) 0.000 ( ±0.000 ) 0.000 ( ±0.000 ) 0.383 ( ±0.055 ) 0.244 0.223 0.254 0.317 0.358 0.298 0.361 0.256 0.340 59.80 ( ±1.32 ) 32.98 ( ±1.37 ) 33.47 ( ±1.31 ) 47.83 ( ±1.04 ) 58.11 ( ±0.97 ) 42.46 ( ±3.03 ) 38.77 ( ±6.82 ) 48.48 ( ±11.14 ) 45.29 ( ±3.02 ) 15.27 ( ±0.00 ) 43.13 ( ±0.86 ) 46.44 ( ±0.04 ) 37.87 ( ±1.39 ) 31.35 ( ±0.27 ) 41.70 ( ±1.78 ) 53.71 ( ±3.30 ) 29.54 ( ±24.72 ) 43.69 ( ±1.98 ) 0.999 0.999 0.999 0.999 0.999 0.985 0.530 0.000 0.987 90.78 ( ±0.27 ) 90.78 ( ±0.27 ) 90.78 ( ±0.27 ) 90.78 ( ±0.27 ) 90.78 ( ±0.27 ) 90.23 ( ±0.16 ) 72.92 ( ±8.71 ) 52.72 ( ±14.08 ) 90.31 ( ±0.19 ) SGT+P FRESH+P A2R+P UNIREX ( DLM - P ) UNIREX ( AA - FP ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 0.608 0.614 0.800 0.842 0.626 0.857 0.864 0.524 0.695 0.751 0.525 0.529 0.588 0.603 0.286 ( ±0.034 ) 0.143 ( ±0.072 ) 0.182 ( ±0.097 ) 0.311 ( ±0.011 ) 0.341 ( ±0.008 ) 0.335 ( ±0.018 ) 0.353 ( ±0.017 ) 0.339 ( ±0.032 ) 0.000 ( ±0.000 ) 0.000 ( ±0.000 ) 0.371 ( ±0.032 ) 0.406 ( ±0.046 ) 0.346 ( ±0.023 ) 0.356 ( ±0.015 ) 0.311 0.603 0.992 1.000 0.363 0.991 0.994 43.03 ( ±1.69 ) 56.21 ( ±10.47 ) 87.30 ( ±0.44 ) 87.85 ( ±0.13 ) 44.79 ( ±0.81 ) 86.99 ( ±0.40 ) 87.58 ( ±0.14 ) 42.59 ( ±1.63 ) 64.09 ( ±5.59 ) 77.31 ( ±0.72 ) 77.63 ( ±0.35 ) 47.18 ( ±0.83 ) 77.53 ( ±0.15 ) 77.22 ( ±0.28 ) 0.988 0.544 0.656 1.000 0.985 0.992 0.994 90.36 ( ±0.08 ) 73.44 ( ±12.88 ) 77.31 ( ±0.72 ) 90.80 ( ±0.33 ) 90.21 ( ±0.08 ) 90.51 ( ±0.12 ) 90.59 ( ±0.09 ) Table 8 : Main Results on e - SNLI .
+Ablation Method Performance Faithfulness Plausibility Acc ( ↑ ) CSD ( ↑ ) Comp ( ↑ ) Suff ( ↓ ) AUPRC ( ↑ ) TF1 ( ↑ ) Ext Type ( F ) UNIREX ( AA - F , Rand ) UNIREX ( AA - F , Gold ) UNIREX ( AA - F , Inv ) UNIREX ( AA - F , IG ) 94.05 ( ±0.35 ) 93.81 ( ±0.54 ) 93.47 ( ±1.81 ) 93.81 ( ±0.55 ) -0.156 ( ±-0.156 ) -0.017 ( ±0.070 ) -0.115 ( ±0.018 ) -0.138 ( ±0.040 ) 0.171 ( ±0.040 ) 0.232 ( ±0.088 ) 0.242 ( ±0.010 ) 0.119 ( ±0.009 ) 0.327 ( ±0.050 ) 0.249 ( ±0.021 ) 0.357 ( ±0.019 ) 0.258 ( ±0.031 ) 44.92 ( ±0.00 ) 100.00 ( ±0.00 ) 20.49 ( ±0.00 ) 49.94 ( ±1.77 ) 46.15 ( ±0.00 ) 100.00 ( ±0.00 ) 0.00 ( ±0.00 ) 50.75 ( ±0.54 ) Ext Type ( FP ) UNIREX ( AA - FP , Sum ) UNIREX ( AA - FP , MLP ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 93.81 ( ±0.55 ) 93.23 ( ±0.92 ) 93.81 ( ±0.18 ) 93.68 ( ±0.67 ) -0.138 ( ±0.040 ) 0.087 ( ±0.134 ) 0.151 ( ±0.056 ) 0.189 ( ±0.030 ) 0.119 ( ±0.009 ) 0.285 ( ±0.051 ) 0.319 ( ±0.090 ) 0.302 ( ±0.039 ) 0.258 ( ±0.031 ) 0.197 ( ±0.100 ) 0.167 ( ±0.036 ) 0.113 ( ±0.013 ) 49.94 ( ±1.77 ) 54.82 ( ±1.97 ) 85.80 ( ±0.74 ) 82.55 ( ±0.84 ) 50.75 ( ±0.54 ) 49.62 ( ±0.65 ) 72.76 ( ±0.19 ) 70.65 ( ±0.44 ) Comp / Suff Loss UNIREX ( SLM - FP , Comp ) UNIREX ( SLM - FP , Suff ) UNIREX ( SLM - FP , Comp+Suff ) 93.59 ( ±0.11 ) 94.16 ( ±0.39 ) 93.68 ( ±0.67 ) 0.040 ( ±0.096 ) 0.014 ( ±0.010 ) 0.189 ( ±0.030 ) 0.350 ( ±0.048 ) 0.166 ( ±0.003 ) 0.302 ( ±0.039 ) 0.310 ( ±0.049 ) 0.152 ( ±0.012 ) 0.113 ( ±0.013 ) 82.79 ( ±0.62 ) 83.74 ( ±0.84 ) 82.55 ( ±0.84 ) 70.74 ( ±0.81 ) 70.94 ( ±0.86 ) 70.65 ( ±0.44 ) Suff Criterion UNIREX ( SLM - FP , KL Div ) UNIREX ( SLM - FP , MAE ) UNIREX ( SLM - FP , Margin ) 93.06 ( ±0.25 ) 93.78 ( ±0.13 ) 93.68 ( ±0.67 ) 0.174 ( ±0.100 ) 0.135 ( ±0.053 ) 0.189 ( ±0.030 ) 0.306 ( ±0.098 ) 0.278 ( ±0.058 ) 0.302 ( ±0.039 ) 0.131 ( ±0.005 ) 0.143 ( ±0.008 ) 0.113 ( ±0.013 ) 82.62 ( ±0.88 ) 82.66 ( ±0.61 ) 82.55 ( ±0.84 ) 70.43 ( ±0.65 ) 70.25 ( ±0.45 ) 70.65 ( ±0.44 ) SLM Ext Head UNIREX ( SLM - FP , Linear ) UNIREX ( SLM - FP , MLP-2048 - 2 ) UNIREX ( SLM - FP , MLP-4096 - 3 ) 93.68 ( ±0.67 ) 93.67 ( ±0.18 ) 93.19 ( ±0.79 ) 0.189 ( ±0.030 ) 0.179 ( ±0.060 ) 0.141 ( ±0.030 ) 0.302 ( ±0.039 ) 0.323 ( ±0.071 ) 0.295 ( ±0.057 ) 0.113 ( ±0.013 ) 0.144 ( ±0.012 ) 0.154 ( ±0.027 ) 82.55 ( ±0.84 ) 83.82 ( ±0.77 ) 84.53 ( ±0.61 ) 70.65 ( ±0.44 ) 70.93 ( ±0.87 ) 71.41 ( ±0.91 ) Table 9 : UNIREX Ablation Studies on SST .
+66  Task Dataset Method Performance Faithfulness Perf ( ↑ ) CSD ( ↑ ) Comp ( ↑ ) Suff ( ↓ ) SST Vanilla UNIREX ( AA - F ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 93.81 ( ±0.74 ) 93.19 ( ±0.40 ) 93.81 ( ±0.18 ) 93.68 ( ±0.67 ) -0.070 ( ±0.061 ) 0.360 ( ±0.055 ) 0.151 ( ±0.056 ) 0.189 ( ±0.030 ) 0.145 ( ±0.023 ) 0.405 ( ±0.031 ) 0.319 ( ±0.090 ) 0.302 ( ±0.039 ) 0.215 ( ±0.038 ) 0.045 ( ±0.024 ) 0.167 ( ±0.036 ) 0.113 ( ±0.013 )
+Yelp Vanilla UNIREX ( AA - F ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 92.50 ( ±2.07 ) 90.75 ( ±1.30 ) 92.37 ( ±0.46 ) 86.60 ( ±1.57 ) -0.156 ( ±0.028 ) -0.138 ( ±0.120 ) 0.169 ( ±0.060 ) 0.114 ( ±0.056 ) 0.067 ( ±0.004 ) 0.096 ( ±0.026 ) 0.265 ( ±0.094 ) 0.175 ( ±0.055 ) 0.222 ( ±0.031 ) 0.233 ( ±0.096 ) 0.097 ( ±0.033 ) 0.060 ( ±0.001 )
+Amazon Vanilla UNIREX ( AA - F ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 91.13 ( ±0.28 ) 86.60 ( ±0.95 ) 89.35 ( ±2.22 ) 81.82 ( ±7.62 ) -0.120 ( ±0.038 ) -0.111 ( ±0.161 ) 0.133 ( ±0.039 ) 0.097 ( ±0.027 ) 0.096 ( ±0.008 ) 0.100 ( ±0.042 ) 0.232 ( ±0.072 ) 0.147 ( ±0.012 ) 0.217 ( ±0.033 ) 0.210 ( ±0.122 ) 0.098 ( ±0.033 ) 0.050 ( ±0.017 ) Hate Speech Detection Stormfront Vanilla UNIREX ( AA - F ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 10.48 ( ±1.66 ) 9.43 ( ±1.45 ) 10.37 ( ±2.66 ) 4.51 ( ±1.87 ) -0.066 ( ±0.072 ) 0.329 ( ±0.104 ) 0.052 ( ±0.027 ) 0.049 ( ±0.041 ) 0.153 ( ±0.002 ) 0.337 ( ±0.073 ) 0.167 ( ±0.084 ) 0.110 ( ±0.039 ) 0.219 ( ±0.071 ) 0.008 ( ±0.031 ) 0.115 ( ±0.059 ) 0.062 ( ±0.043 ) Offensive Speech Detection OffenseEval Vanilla UNIREX ( AA - F ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 33.51 ( ±0.99 ) 35.69 ( ±2.30 ) 35.52 ( ±1.26 ) 38.17 ( ±0.96 ) -0.125 ( ±0.068 ) -0.028 ( ±0.084 ) 0.053 ( ±0.012 ) 0.039 ( ±0.031 ) 0.104 ( ±0.007 ) 0.076 ( ±0.008 ) 0.140 ( ±0.049 ) 0.087 ( ±0.016 ) 0.229 ( ±0.064 ) 0.104 ( ±0.076 ) 0.087 ( ±0.045 ) 0.048 ( ±0.024 ) Irony Detection SemEval2018 - Irony Vanilla UNIREX ( AA - F ) UNIREX ( DLM - FP ) UNIREX ( SLM - FP ) 29.63 ( ±4.72 ) 47.99 ( ±6.33 ) 31.97 ( ±2.80 ) 17.42 ( ±4.04 ) -0.058 ( ±0.075 ) 0.026 ( ±0.080 ) 0.047 ( ±0.017 ) 0.027 ( ±0.047 ) 0.154 ( ±0.001 ) 0.087 ( ±0.022 ) 0.149 ( ±0.052 ) 0.091 ( ±0.027 ) 0.212 ( ±0.074 ) 0.061 ( ±0.071 ) 0.102 ( ±0.053 ) 0.064 ( ±0.033 )
+Sentiment
+Analysis Table 10 : Zero - Shot Explainability Transfer from SST to Unseen Datasets / Tasks .
+67 

@@ -1,0 +1,260 @@
+Evaluating zero - shot transfers and multilingual models for dependency parsing and POS tagging within the low - resource language family
+Tupían Frederic Blum Institut für deutsche Sprache und Linguistik Humboldt - Universität zu Berlin frederic.blum@hu-berlin.de
+Abstract The idea to leverage existing databases and models for cross - lingual transfer is not new ( Aufrant et al. , 2016 ; Duong et al. , 2015 ; Lacroix et al. , 2016 ; Vania et al. , 2019 ; Wang et al. , 2019 ) .
+However , many studies even in this area remain within the environment of high - resource languages , and benchmarks with a typological sample as representative as possible - common nowadays in linguistic typology - are rarely found ( Bender , 2009 ; de Lhoneux , 2019 ; Ponti et al. , 2019 ) .
+The main goal of this contribution is to replicate previous findings on crosslingual transfer in low - resource settings ( MeechanMaddon and Nivre , 2019 ) within an underpresented language family , Tupían .
+This work presents two experiments with the goal of replicating the transferability of dependency parsers and POS taggers trained on closely related languages within the lowresource language family Tupían .
+The experiments include both zero - shot settings as well as multilingual models .
+Previous studies have found that even a comparably small treebank from a closely related language will improve sequence labelling considerably in such cases .
+Results from both POS tagging and dependency parsing confirm previous evidence that the closer the phylogenetic relation between two languages , the better the predictions for sequence labelling tasks get .
+In many cases , the results are improved if multiple languages from the same family are combined .
+This suggests that in addition to leveraging similarity between two related languages , the incorporation of multiple languages of the same family might lead to better results in transfer learning for NLP applications .
+1 2 Data and Hypotheses
+The data used for this study is taken from the Tupían Dependency Treebanks project ( TuDeT , Gerardi et al. , 2021)1 , which is openly available under a CC - BY - SA-4.0 License and is already partially present in the Universal Dependencies database .
+The author is not part of the team that developed these treebanks .
+There are currently seven languages in the dataset , which belong to different branches of the Tupían family ( Hammarström et al. , 2021 ) .
+Except Tupinambá , which is extinct , the languages are spoken in Brazilian territory .
+All languages but Guajajára have SOV word order , while the former has VSO .
+The datasets are summarized in Table 1 .
+There are some important differences with respect to the distribution of annotations data .
+For example , adjectives are absent for nearly all languages but Karo , either because they do not have adjectives and use stative verbs instead like Guajajára ( Harrison , 2010 ) , or because of low sample size .
+There are some tags , like NUM and INTJ , which are quite unevenly distributed between the available treebanks for the respective languages .
+As a consequence , this will result in low macro - f1 Introduction
+For most of the 7000 languages of the world , no NLP resources exist ( Joshi et al. , 2020 ; Mager et al. , 2018 ) .
+As a response to this situation , more and more initiatives emerged in recent years that work on NLP applications for underrepresented and low - resource languages ( Orife et al. , 2020 ; Nekoto et al. , 2020 ; Mager et al. , 2021 ) .
+Despite those advances , access to tools like machine translation still is hindered by a large language barrier .
+Most of those languages do not have large text corpora , which have been used for the recent advantages in NLP like the building of large transformer models ( Vaswani et al. , 2017 ) .
+Annotated data and parallel corpora thus remain an important but scarce tool for many of them .
+Yet , annotating this data is a challenge itself , and might be aided through the transfer of models from languages with more available resources .
+1 https://github.com/tupian-language-resources/tudet 1 Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics Student Research Workshop , pages 1 - 9 May 22 - 27 , 2022 © 2022 Association for Computational Linguistics  Language Akuntsu Guajajára Kaapor Karo Makuráp Mundurukú Tupinambá Code aqz gub urb arr mpu myu tpn Branch Tuparic Tupi - Guarani Tupi - Guarani Ramarama Tuparic Mundurukuic Tupi - Guarani Word order
+SOV VSO SOV
+SOV
+SOV
+SOV
+SOV Tokens 408 3571 366 2318 146 828 2576 Utterances 101 497 83 674 31 124 353 Tokens per utterance 4.04 7.18 4.41 3.44 4.71 6.68 7.30 Table 1 : Treebanks used in the dataset scores , making accuracy the more relevant measure for this research question .
+A detailed description of the distribution of UPOS - tags in the dataset is given in Appendix A , the distribution of dependency relations is given in Appendix B.
+In this study , I primarily test the utility of crosslingual transfer for POS - taggers and dependency parsers with special attention given to language phylogeny .
+Language phylogeny can be seen as a proxy to typological features , given that closely related languages usually show many structural similarities .
+Previous studies have shown that even a comparably small treebank from a closely related language will improve the results of annotation considerably ( Meechan - Maddon and Nivre , 2019 ) .
+Recent studies suggest to leverage phylogenetic proximity in a more efficient way than simply comparing languages based on the language family they belong to ( Dehouck and Denis , 2019 ) .
+Which model generalizes best over the different treebanks used in this sample , and what role does language phylogeny play in this ?
+In this study , ‘ closeness ’ of two languages is defined based on the proximity of their phylogenetic clades .
+This is used as a proxy to their typological similarity .
+Especially for languages which do not have extensive descriptive material available , such similarities can not easily be computed from typological databases .
+Based on phylolinguistic inferences about Tupían ( Galucio et al. , 2015 ; Gerardi and Reichert , 2021 ) , the following explicit hypotheses are postulated : to Makuráp , and Karo is closer to Makuráp than to Akuntsú .
+The results should mirror this relation .
+3 Experiments One of the challenges for NLP applications with low - resource languages is the lack of languagespecific resources on which embeddings can be trained on ( Mager et al. , 2018 ) .
+Even though there are useful pipelines which can sometimes be used to crawl monolingual data from published sources ( Bustamante et al. , 2020 ) , those are not always available or accessible .
+The embeddings used for the experiments in this contributions are based on the jw300 - corpus ( Agić and Vulić , 2019 ) .
+This corpus is derived specifically from 343 low - resource languages and shows greater typological diversity than most dominating multilingual models .
+The embeddings are implemented in flair ( Akbik et al. , 2018 ) .
+They have been fine - tuned for the pooled set of source languages .
+Transformer word embeddings mBERT ( Devlin et al. , 2019 ) and ROBERTA ( Conneau et al. , 2020 ) were also evaluated for the model , but rarely surpassed 40 % accuracy for the source languages and have thus been discarded from further experiments for now .
+This results further call into question the utility of such large models for typologically diverse languages , and strengthens previous findings that even the largest multilingual transformer models do not show good results when transferring to typologically different languages ( Ahmad et al. , 2019 ; Lauscher et al. , 2020 ; Pires et al. , 2019 ) .
+However , the exact reasons for their failure in this experiment are not entirely clear and need further research with more typologically diverse low - resource languages .
+The experiments will be done for both POS tagging and dependency parsing and include a zeroshot setting .
+Also , models trained on individual source languages will be compared against models 1 .
+Guajajára and Tupinambá should provide the best results for the evaluation of Kaapor , given that all three are part of the Tupi - Guarani branch of the Tupían language family .
+2 .
+Despite belonging to three different branches , the remaining four languages are quite close to each other in networks of lexical similarity .
+Here , Mundurukú is closer to Akuntsú than 2  trained on multiple datasets , with the evaluation set being the remaining treebanks of the dataset .
+Given the small amoung of training data and the models chosen , all model runs combined did not need more than three hours on CPU .
+The evaluation was done within the provided utilities by flair and SuPaR , respectively .
+All code is available on OSF.2 the average results are presented in Table 2 .
+In case of the fine - tuning experiment , training accuracy describes the result on the test set , while the language - specific column gives the result for the overall treebank .
+The evaluation column is a summary over the evaluation set , without considering the source language .
+The best result for each of the languages in the evaluation set is boldfaced .
+Unsurprisingly , the experiment conditions with fine - tuning for a specific language show the best results for the respective language .
+In both cases , the results for the other language were also improved , confirming the hypothesis that the results of Akuntsu and Mundurukú should be closely related .
+This could motivate training a model on Akuntsu and Mundurukú combined .
+The close relationship between Akuntsu and Makuráp , on the other hand , does not seem to lead to better results .
+The best predictions for Makuráp are instead based on the model trained for Karo , a relationship that was predicted by the second hypothesis , even though only as the second strongest effect .
+Despite those results , it should be considered that Makuráp has by far the smallest treebank available with only 146 annotated tokens , so no final evaluations should be made .
+This also reflects in the low overall accuracy in all settings for Makuráp , never surpassing 40 % .
+3.1 POS - tagging For all experiments , the datasets have been separated into source ( Guajajára , Karo , Tupinambá ) and target languages ( Akuntsu , Kaapor , Makuráp , Mundurukú ) .
+The split has been made according to the availability of data , and all treebanks with over 2000 annotated tokens have been used as source language .
+The main reason for this is to assure that the training sets have sufficient data for training and evaluating the models .
+Every treebank in the source set was further split into training , test and dev data ( 80/10/10 ) .
+Given the scarcity of the data , all models were trained including the dev - set .
+The model itself a BiLSTM - CRF sequence tagger implemented using the flair - framework ( Akbik et al. , 2019 , Version 0.10),3 trained with a hidden size of 512 .
+The following models were run : 1 . training on the combined source set ( tupi3 ) 3.2 2 . training on the individual source languages
+Guajajára ( gub ) , Karo ( arr ) and Tupinambá ( tpn ) Dependency parsing The experiment settings were mostly identical for the dependency parsing experiment .
+The main difference is that no pre - trained model for European languages is available for the dependency parser that was used for the experiments .
+For the same reason , no fine - tuning for the tupi3 setting is implemented so far .
+Instead , a single model for Mundurukú was added for further evaluation of Hypothesis 2 .
+As model architecture , an implementation of the deep biaffine dependency parser ( Dozat and Manning , 2017 ) from SuPar ( Version 1.01 ) was used ( Zhang et al. , 2020).5 The results are shown in Table 3 .
+In case the language was the source language , the evaluation score only reflects the evaluation of the test split .
+This is the case for the tupi3 setting as well as the individual languages .
+All other languages in each row were evaluated against the entire dataset .
+As the main evaluation criteria , Labelled Attachment Scores ( LAS ) were chosen .
+3 . fine - tuning the tupi3 model for each Akuntsu ( tupi3 - aqz ) and Mundurukú ( tupi3+myu ) on 50 % of of the respective data , with the remaining part of the data used as evaluation 4 .
+using a model pre - trained for 12 European UD languages , implemented in flair ( Akbik et al. , 2018).4 This model was trained on treebanks from Czech , Danish , Dutch , English , Finnish , French , German , Italian , Norwegian , Polish , Spanish , and Swedish The pre - trained model for European languages was used in order to provide a baseline of transferability of models based on unrelated , high - resource languages .
+All models were evaluated on each target language .
+Each model was run five times , and 2 https://doi.org/10.17605/OSF.IO/ZHDMP https://github.com/flairNLP/flair , MIT License 4 https://huggingface.co/flair/upos-multi 3 5 3 https://github.com/yzhangcs/parser , MIT License  Model arr gub tpn tupi3 tupi3+aqz tupi3+myu multi TrainAcc 0.84 0.91 0.87 0.86 0.56 0.55 TrainF1 0.68 0.76 0.81 0.64 0.31 0.22 EvalAcc 0.30 0.44 0.42 0.46 0.48 0.48 0.33 EvalF1 0.10 0.19 0.17 0.20 0.19 0.19 0.13 aqz 0.35 0.45 0.43 0.49 0.52 0.51 0.38 mpu 0.36 0.29 0.25 0.35 0.32 0.34 0.23 myu 0.30 0.48 0.49 0.47 0.51 0.53 0.36 urb 0.24 0.41 0.34 0.42 0.40 0.39 0.23 Table 2 : Average training and evaluation accuracy and F1 - scores over five runs of the POS tagging experiment Model arr gub myu tpn tupi3
+aqz 0.00 12.90 19.09 13.30 9.50 arr 64.10 14.50 14.98 0.00 62.60 gub 0.00 73.30 10.65 20.90 72.70 mpu 25.00 9.00 7.64 14.30 11.80 myu 0.00 8.90 65.28 0.00 8.90 tpn 0.00 10.30 7.85 46.40 42.90 urb 0.00 14.20 13.89 15.80 21.80 Table 3 : Labelled Attachment Scores ( LAS ) of the dependency parsing experiment 4 Discussion Maddon and Nivre , 2019 )
+, the results in this contribution suggest that as few as 50 or 60 training utterances could already provide a considerable improvement of the evaluation scores .
+These are only approximate numbers , and definitely need more experiments with other datasets in order to be confirmed .
+All in all , the POS tagging experiment shows that language phylogeny is a strong , but not a deterministic predictor for the transferability of models .
+Given the low amount of training data for the models even in the combined tupi3 setting , the zero - shot transfer results are better than perhaps expected .
+4.1 Discussing the POS tagging experiment Against Hypothesis 1 , the best result for Kaapor is not achieved by Guajajára or Tupinambá , but by the combined model trained on the pooled treebanks .
+However , the model of Guajajára is only 0.01 % behind the pooled model and should be considerd equal , as it is well within the standard deviation of the average result ( upos 0.02 , gub 0.01 ) .
+It should also not be forgotten that two of the three languages in the pooled set , including Guajajára itself , are part of the Tupí - Guarani branch , which can be reasonably postulated as part of the reason that tupi3 scores so high .
+Instead of a single language of that branch , it might just be the combination of two languages from the same branch that shows such strong results .
+This leads to another result that should be highlighted , namely the overall usefulness of the multilingual Tupían model .
+While the European multilingual model had , perhaps expectedly without any fine - tuning , low results for most evaluations , the Tupían model was competitive in most settings .
+For both Makuráp and Kaapor it was basically equal with the best individual model , for Akuntsu it was second best behind the fine - tuned models , and even for Mundurukú it showed good results , even though it showed weaker predictions in this case .
+While previous studies suggested that at least 200 annotated utterances are sufficient to improve the results of a multilingual model considerably ( Meechan 4.2 Discussing the Dependency Parsing experiment Overall , the transfer LAS are much lower than the accuracy in the previous experiment .
+Given the complexity of dependency parsing compared to POS tagging , this is hardly surprising .
+This is also true for the training scores , never surpassing 75 % .
+With regard to Hypothesis 1 , we see again that both Guajajára and Tupinambá show better results for Kaapor than Karo and Mundurukú .
+The model hugely improves in the tupi3 setting , indicating again that both larger training treebanks and combining different closely related languages might show considerable effects to the evaluation of a new language .
+This has already been the case for the POS tagging , and will result in an additional experiment in the next phase of this study .
+Hypothesis 2 is also largely confirmed .
+Karo 4  was hypothesized to achieve the best results for the evaluation of Makuráp , and this predictions is met strongly , with a LAS difference over 10 % .
+As Mundurukú outperforms the other languages in the evaluation of Akuntsu , the second part of the hypothesis is also confirmed .
+The results for Mundurukú itself further show that even with a small treebank of only ∼ 100 utterances , good predictions can be achieved .
+At the current state of this paper , an important gap is the missing detailed error analysis .
+One important source of errors for the models is the uneven distribution of dependency relations between the treebanks , as shown in Table 5 .
+Partially due to the low amount of data and due to languagespecific differences , some tags are distributed unevenly among languages , or are not present at all in some of them .
+However , even when accounting for this differences , the exact factors that determine failure and success of the transfer remain not fully explained .
+For example , whether the overall success of the combined model of various languages ( tupi3 ) is due to the higher amount of training data , or whether there are other factors involved when combining data from multiple languages that could be leveraged for the development of NLP applications for low - resource languages , can not be answered by this contribution .
+5 experiments , CRF2o dependency parsing ( Zhang et al. , 2020 ) showed promising results for transfer results as well .
+Especially in the dependency parsing experiment the transfer scores were quite low , and further improving the training data as well as comparing different models should be a viable solution for this challenge .
+References Željko Agić and Ivan Vulić. 2019 .
+JW300 : A widecoverage parallel corpus for low - resource languages .
+In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics , pages 3204 – 3210 , Florence , Italy .
+Association for Computational Linguistics .
+Wasi Ahmad , Zhisong Zhang , Xuezhe Ma , Eduard Hovy , Kai - Wei Chang , and Nanyun Peng . 2019 .
+On difficulties of cross - lingual transfer with order differences : A case study on dependency parsing .
+In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies , Volume 1 ( Long and Short Papers ) , pages 2440–2452 , Minneapolis , Minnesota .
+Association for Computational Linguistics .
+Alan Akbik , Tanja Bergmann , Duncan Blythe , Kashif Rasul , Stefan Schweter , and Roland Vollgraf . 2019 .
+FLAIR : An easy - to - use framework for state - of - theart NLP .
+In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics ( Demonstrations ) , pages 54–59 , Minneapolis , Minnesota .
+Association for Computational Linguistics .
+Conclusion
+This study further confirms previous findings that cross - lingual transfer of dependency parsers and POS taggers is a viable option in low - resource settings if a closely related language is available ( Vania et al. , 2019 ; Meechan - Maddon and Nivre , 2019 ) .
+This extends previous evidence for phylogenetically informed transfer from Indo - European and Uralic ( Dehouck and Denis , 2019 ) to Tupían .
+Further experiments on other language families should be conducted in order to confirm the exact features that make successful transfer possible .
+Further , this study provided further evidence for extending the phylolinguistically informed combination of source languages .
+In all experiment settings of this study , the pooled source language set had very good results , and a targeted combination will likely further improve the results .
+Further follow - up experiments will consist of targeted combinations of annotated data from different languages , including an incorporation of typological features and delexicalized transfer .
+In preliminary Alan Akbik , Duncan Blythe , and Roland Vollgraf . 2018 .
+Contextual string embeddings for sequence labeling .
+In COLING 2018 , 27th International Conference on Computational Linguistics , pages 1638–1649 .
+Lauriane Aufrant , Guillaume Wisniewski , and François Yvon . 2016 .
+Zero - resource dependency parsing : Boosting delexicalized cross - lingual transfer with linguistic knowledge .
+In Proceedings of COLING 2016 , the 26th International Conference on Computational Linguistics : Technical Papers , pages 119–130 , Osaka , Japan .
+The COLING 2016 Organizing Committee .
+Emily M. Bender . 2009 .
+Linguistically naïve ! =
+language independent : Why NLP needs linguistic typology .
+In Proceedings of the EACL 2009 Workshop on the Interaction between Linguistics and Computational Linguistics : Virtuous , Vicious or Vacuous ? , pages 26–32 , Athens , Greece .
+Association for Computational Linguistics .
+Gina Bustamante , Arturo Oncevay , and Roberto Zariquiey . 2020 .
+No data to crawl ?
+monolingual corpus creation from PDF files of truly low - resource 5  languages in Peru .
+In Proceedings of the 12th Language Resources and Evaluation Conference , pages 2914–2923 , Marseille , France .
+European Language Resources Association .
+Harald Hammarström , Robert Forkel , Martin Haspelmath , and Sebastian Bank . 2021 .
+glottolog / glottolog : Glottolog database 4.5 .
+Carl H. Harrison . 2010 .
+Verb prominence , verb initialness , ergativity and typological disharmony in guajajara .
+In Desmond C. Derbyshire and Geoffrey K. Pullum , editors , Volume 1 Handbook of Amazonian languages : Volume 1 , pages 407–439 .
+De Gruyter Mouton .
+Alexis Conneau , Kartikay Khandelwal , Naman Goyal , Vishrav Chaudhary , Guillaume Wenzek , Francisco Guzmán , Edouard Grave , Myle Ott , Luke Zettlemoyer , and Veselin Stoyanov . 2020 .
+Unsupervised cross - lingual representation learning at scale .
+In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics , pages 8440 – 8451 , Online .
+Association for Computational Linguistics .
+Pratik Joshi , Sebastin Santy , Amar Budhiraja , Kalika Bali , and Monojit Choudhury . 2020 .
+The state and fate of linguistic diversity and inclusion in the NLP world .
+In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics , pages 6282–6293 , Online .
+Association for Computational Linguistics .
+Miryam de Lhoneux .
+2019 .
+Linguistically informed neural dependency parsing for typologically diverse languages .
+Ph.D. thesis , Acta Universitatis Upsaliensis .
+Ophélie Lacroix , Lauriane Aufrant , Guillaume Wisniewski , and François Yvon . 2016 .
+Frustratingly easy cross - lingual transfer for transition - based dependency parsing .
+In Proceedings of the 2016 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies , pages 1058–1063 , San Diego , California .
+Association for Computational Linguistics .
+Mathieu Dehouck and Pascal Denis . 2019 .
+Phylogenic multi - lingual dependency parsing .
+In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies , Volume 1 ( Long and Short Papers ) , pages 192–203 , Minneapolis , Minnesota .
+Association for Computational Linguistics .
+Jacob Devlin , Ming - Wei Chang , Kenton Lee , and Kristina Toutanova . 2019 .
+BERT : Pre - training of deep bidirectional transformers for language understanding .
+In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies , Volume 1 ( Long and Short Papers ) , pages 4171–4186 , Minneapolis , Minnesota .
+Association for Computational Linguistics .
+Anne Lauscher , Vinit Ravishankar , Ivan Vulić , and Goran Glavaš . 2020 .
+From zero to hero : On the limitations of zero - shot language transfer with multilingual Transformers .
+In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing ( EMNLP ) , pages 4483–4499 , Online .
+Association for Computational Linguistics .
+Manuel Mager , Ximena Gutierrez - Vasques , Gerardo Sierra , and Ivan Meza - Ruiz . 2018 .
+Challenges of language technologies for the indigenous languages of the Americas .
+In Proceedings of the 27th International Conference on Computational Linguistics , pages 55–69 , Santa Fe , New Mexico , USA .
+Association for Computational Linguistics .
+Timothy Dozat and Christopher D. Manning .
+2017 .
+Deep biaffine attention for neural dependency parsing .
+In ICLR 2017 .
+Long Duong , Trevor Cohn , Steven Bird , and Paul Cook . 2015 .
+A neural network model for low - resource Universal Dependency parsing .
+In Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing , pages 339–348 , Lisbon , Portugal .
+Association for Computational Linguistics .
+Manuel Mager , Arturo Oncevay , Annette Rios , Ivan Vladimir Meza Ruiz , Alexis Palmer , Graham Neubig , and Katharina Kann , editors .
+2021 .
+Proceedings of the First Workshop on Natural Language Processing for Indigenous Languages of the Americas .
+Association for Computational Linguistics , Online .
+Ana Vilacy Galucio , Sérgio Meira , Joshua Birchall , Denny Moore , Nilson Gabas , Sebastian Drude , Luciana Storto , Gessiane Picanço , and Carmen Reis Rodrigues . 2015 .
+Genealogical relations and lexical distances within the tupian linguistic family .
+Boletim do Museu Paraense Emílio Goeldi .
+Ciências Humanas , 10:229–274 .
+Ailsa Meechan - Maddon and Joakim Nivre .
+2019 .
+How to parse low - resource languages : Cross - lingual parsing , target language annotation , or both ?
+In Proceedings of the Fifth International Conference on Dependency Linguistics ( Depling , SyntaxFest 2019 ) , pages 112–120 , Paris , France .
+Association for Computational Linguistics .
+Fabrício Ferraz Gerardi and Stanislav Reichert . 2021 .
+The tupí - guaraní language family .
+Diachronica , 38(2):151–188 .
+Wilhelmina Nekoto , Vukosi Marivate , Tshinondiwa Matsila , Timi Fasubaa , Taiwo Fagbohungbe , Solomon Oluwole Akinola , Shamsuddeen Muhammad , Salomon Kabongo Kabenamualu , Salomey Osei , Freshia Sackey , Rubungo Andre Niyongabo , Fabrício Ferraz Gerardi , Stanislav Reichert , Carolina Aragon , Lorena Martín - Rodríguez , Gustavo Godoy , and Tatiana Merzhevich . 2021 .
+Tudet :
+Tupían dependency treebank .
+6  Ricky Macharm , Perez Ogayo , Orevaoghene Ahia , Musie Meressa Berhe , Mofetoluwa Adeyemi , Masabata Mokgesi - Selinga , Lawrence Okegbemi , Laura Martinus , Kolawole Tajudeen , Kevin Degila , Kelechi Ogueji , Kathleen Siminyu , Julia Kreutzer , Jason Webster , Jamiil Toure Ali , Jade Abbott , Iroro Orife , Ignatius Ezeani , Idris Abdulkadir Dangana , Herman Kamper , Hady Elsahar , Goodness Duru , Ghollah Kioko , Murhabazi Espoir , Elan van Biljon , Daniel Whitenack , Christopher Onyefuluchi , Chris Chinenye Emezue , Bonaventure F. P. Dossou , Blessing Sibanda , Blessing Bassey , Ayodele Olabiyi , Arshath Ramkilowan , Alp Öktem , Adewale Akinfaderin , and Abdallah Bashir . 2020 .
+Participatory research for low - resourced machine translation : A case study in African languages .
+In Findings of the Association for Computational Linguistics : EMNLP 2020 , pages 2144–2160 , Online .
+Association for Computational Linguistics .
+the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing ( EMNLP - IJCNLP ) , pages 5721–5727 , Hong Kong , China .
+Association for Computational Linguistics .
+Yu Zhang , Zhenghua Li , and Min Zhang . 2020 .
+Efficient second - order TreeCRF for neural dependency parsing .
+In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics , pages 3295–3305 , Online .
+Association for Computational Linguistics .
+Iroro Orife , Julia Kreutzer , Blessing Sibanda , Daniel Whitenack , Kathleen Siminyu , Laura Martinus , Jamiil Toure Ali , Jade Z. Abbott , Vukosi Marivate , Salomon Kabongo , Musie Meressa , Espoir Murhabazi , Orevaoghene Ahia , Elan Van Biljon , Arshath Ramkilowan , Adewale Akinfaderin , Alp Öktem , Wole Akin , Ghollah Kioko , Kevin Degila , Herman Kamper , Bonaventure Dossou , Chris Emezue , Kelechi Ogueji , and Abdallah Bashir . 2020 .
+Masakhane - machine translation for africa .
+CoRR , abs/2003.11529 .
+Telmo Pires , Eva Schlinger , and Dan Garrette . 2019 .
+How multilingual is multilingual BERT ?
+In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics , pages 4996–5001 , Florence , Italy .
+Association for Computational Linguistics .
+Edoardo Maria Ponti , Helen O’Horan , Yevgeni Berzak , Ivan Vulić , Roi Reichart , Thierry Poibeau , Ekaterina Shutova , and Anna Korhonen . 2019 .
+Modeling language variation and universals : A survey on typological linguistics for natural language processing .
+Computational Linguistics , 45(3):559–601 .
+Clara Vania , Yova Kementchedjhieva , Anders Søgaard , and Adam Lopez .
+2019 .
+A systematic comparison of methods for low - resource dependency parsing on genuinely low - resource languages .
+In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing ( EMNLP - IJCNLP ) , pages 1105–1116 , Hong Kong , China .
+Association for Computational Linguistics .
+Ashish Vaswani , Noam Shazeer , Niki Parmar , Jakob Uszkoreit , Llion Jones , Aidan N Gomez , Łukasz Kaiser , and Illia Polosukhin .
+2017 .
+Attention is all you need .
+In Advances in neural information processing systems , pages 5998–6008 .
+Yuxuan Wang , Wanxiang Che , Jiang Guo , Yijia Liu , and Ting Liu .
+2019 .
+Cross - lingual BERT transformation for zero - shot dependency parsing .
+In Proceedings of 7  A POS - tags used in the dataset 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 UPOS ADJ ADP
+ADV AUX DET INTJ NOUN NUM PART PRON
+PROPN PUNCT VERB CCONJ SCONJ X Akuntsu 2 29 32 7 49 5 429 15 39 78 42 88 184 Guajajára 79 68 9 24 3 250 1 132 32 41 176 181 2 2 Kaapor 3 25 101 16 8 Karo 103 36 42 75 240 244 2 129 129 5 1 222 101 172 55 16 246 11 5 10 2 Makuráp 27 137 14 41 14 219 103 75 14 329 27
+Mundurukú 5 126 29 12 5 2 408 2 25 59 4 115 179 2 23 4 Table 4 : POS tags per 1.000 Tokens used in TuDeT 8 Tupinambá 73 76 4 20 8 338 4 42 48 34 209 140 1 1 1  B Dependency relations used in the dataset 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 deprel advmod amod appos aux case ccomp conj dep discourse dislocated iobj nmod nsubj nummod obj obl parataxis punct root advcl compound det flat list mark orphan cc csubj xcomp acl clf cop goeswith obl : obj obl : subj vocative Akuntsu 39 5 15 2 34 2 15 17 39 2 2 135 150 12 91 59 44 88 248
+Guajajára 65 6 9 56 16 8 11 139 14 52 91 0 55 113 5 176 139 16 1 18 1 2 7 1 Kaapor 101 25 Karo 80 29 2 57 36 3 3 29 26 Makuráp 137 48 62 16 227 8 5 3 60 127 2 65 31 3 1 291 1 19 3 5 47 16 19 5 5 87 14 63 202 156 22 11 5 3 8 2 66 9 14 27 21 116 89 Mundurukú 25 6 10 8 121 4 12 25 14 82 27 96 14 212 14 63 95 1 54 175 34 115 150 41 4 1 Tupinambá 62 1 24 4 62 5 30 24 42 1 1 94 45 4 42 99 32 209 137 54 1 3 28 0 21 1 2 21 1 7 4 10 1 1 3 5 1 Table 5 : Dependency relations per 1.000 tokens used in TuDeT 9 

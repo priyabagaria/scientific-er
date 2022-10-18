@@ -1,0 +1,260 @@
+QiuNiu : A Chinese Lyrics Generation System with Passage - Level Input Le Zhang , Rongsheng Zhang∗ , Xiaoxi Mao , Yongzhu Chang Fuxi AI Lab , NetEase Inc. , Hangzhou , China { zhangle1 , zhangrongsheng}@corp.netease.com
+Abstract Lyrics generation has been a very popular application of natural language generation .
+Previous works mainly focused on generating lyrics based on a couple of attributes or keywords , rendering very limited control over the content of the lyrics .
+In this paper , we demonstrate the QiuNiu , a Chinese lyrics generation system which is conditioned on passage - level text rather than a few attributes or keywords .
+By using the passage - level text as input , the content of generated lyrics is expected to reflect the nuances of users ’ needs .
+The QiuNiu system supports various forms of passage - level input , such as short stories , essays , poetry .
+The training of it is conducted under the framework of unsupervised machine translation , due to the lack of aligned passage - level text - to - lyrics corpus .
+We initialize the parameters of QiuNiu with a custom pretrained Chinese GPT-2 model and adopt a two - step process to finetune the model for better alignment between passage - level text and lyrics .
+Additionally , a postprocess module is used to filter and rerank the generated lyrics to select the ones of highest quality .
+The demo video of the system is available at https://youtu.be/OCQNzahqWgM. 1 十七岁那年
+At the age of seventeen 男孩花了半年的积蓄 the boy spent half a year of his savings 陪女孩去听演唱会 Accompany the girl to the concert 但爱情来得快也去得快
+But love comes and goes quickly 总是让人落泪 Always leave people in tears Figure 1 : This figure depicts a typical creation pattern : the author firstly conceives a rough draft ( in the left box ) and then polishes it to the final work ( in the right box ) .
+on specified keywords ( e.g. , Flower ) or certain attributes such as the lyrics ’ text style ( e.g. , Hip - hop ) and expected theme described by the lyrics ( e.g. , Love ) .
+However , these input only provide very limited control over the content of generated lyrics .
+Sometimes the generated lyrics may deviate far from the user ’s needs .
+To improve the usability of AI as a creation tool , we need to improve the controllability of the generated content .
+Introduction AI creation is an important application domain of Natural Language Generation ( NLG ) , including story generation ( Zhu et al. , 2020 ; Alabdulkarim et al. , 2021 ) , poetry writing ( Zhipeng et al. , 2019 ; Liu et al. , 2020 ; Yang et al. , 2019 ) , lyrics generation ( Potash et al. , 2015 ; Lee et al. , 2019 ; Shen et al. , 2019 ) , etc , .
+Particularly , lyrics generation has always been a popular task of NLG since its intrusiveness and easy data availability .
+Previous works of lyrics generation ( Castro and Attarian , 2018 ; Watanabe et al. , 2018 ; Manjavacas et al. , 2019 ; Fan et al. , 2019 ; Li et al. , 2020 ; Zhang et al. , 2020 ) mainly focused on generating lyrics conditioned ∗ 她来听我的演唱会
+She came to my concert 在十七岁的初恋第一次约会 First date at the age of seventeen 男孩为了她彻夜排队 Boy queued all night for her 半年的积蓄买了门票一对 Half a year of savings to buy a pair of tickets 我唱得她心醉我唱得她心碎 I sang her heart drunk and broken 三年的感情一封信就要收回
+Three years of love was taken back by a letter 她记得月台汽笛声声在催
+She remembered that the platform whistle was rushing 播我的歌陪着人们流泪 Play my song with people ’s tears We argue that adopting free form text as the input is an approach to having precise control over the content of generated lyrics .
+As seen in Figure 1 , an author usually conceives a passage ( shown in the left text box ) in his / her mind that expresses his / her inner feelings and thoughts , and then uses a wealth of writing skills and rhetorical techniques to create the final work ( shown in the right text box ) .
+In this paper , we demonstrate QiuNiu ( the eldest son of the dragon in ancient Chinese mythology , who loves music ) , a Chinese lyrics generation system conditioned on free form passage - level text .
+The QiuNiu system can receive various forms of passage - level user input , which may be in different Corresponding Author 76 Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics System Demonstrations , pages 76 - 82 May 22 - 27 , 2022 © 2022 Association for Computational Linguistics  十七岁那年 At the age of seventeen 男孩花了半年的积蓄 The boy spent half a year of his savings 陪女孩去听演唱会 Accompany the girl to the concert … … Passage - level User Input Generation Model Postprocess Short story essay Classical Poetry Anti - spam 𝑬𝒏𝒄𝒔 for passagelevel text 𝑫𝒆𝒄𝒕 for lyrics Modern Poetry Lyrics scoring Relevance Reranking 她来听我的演唱会 She came to my concert 在十七岁的初恋第一次约会 First date at the age of seventeen 男孩为了她彻夜排队 Boy queued all night for her 半年的积蓄买了门票一对 Half a year of savings to buy a pair of tickets … … Figure 2 : The architecture of QiuNiu system .
+The module of user input can receive various forms of passage - level text .
+And the generation model generates lyrics conditioned on the passage - level user input .
+Finally , a postprocess module is used to select the high - quality lyrics .
+genres ( e.g. , short stories , essays , poetry ) , and eras ( e.g. , classical poetry , modern poetry ) .
+It is basically a text style transfer problem , which greatly suffers from the lack of aligned corpus .
+To construct the training data , we collected a passage - level corpus Ds from multiple sources and 300 K different styles of lyrics corpus Dt .
+Note that it is intractable to train a sequence - to - sequence ( seq2seq ) model from passage - level text to lyrics directly because the Ds and Dt are not aligned .
+To address the issue , the QiuNiu system adopts the framework of unsupervised machine translation ( UMT ) ( Lample et al. , 2018 ; Yang et al. , 2019 ) .
+Specifically , The framework consists of an encoder Encs and a decoder Decs for the input side , an encoder Enct and a decoder Dect for lyrics side .
+The encoder Encs ( or Enct ) encodes the passage - level input text ( or lyrics ) into a hidden representation and the decoder Decs ( or Dect ) decodes it into lyrics ( or passage - level text ) .
+The objective of the model training is to align the passage - level text and lyrics in the latent representation space .
+To train the model , we first initialize the parameters with a custom Chinese GPT-2 ( Radford et al. , 2019 ) model , which is pretrained on around 30 G Chinese books corpus collected online .
+Then we adopt a two - step process to finetune the model by jointly optimizing self - reconstruction loss , crossreconstruction loss and alignment loss .
+After the training is finished , Encs encodes the passage - level input and Dect generates the candidate lyrics .
+Finally , a postprocess module is used to filter and rerank the generated lyrics to select the ones of highest quality .
+Human evaluation indicates the effectiveness of the framework .
+The contributions of the QiuNiu system are summarized as follows : ous forms of passage - level text input for the first time .
+2 . To better align the passage - level text and lyrics , we propose a two - step process to finetune the UMT model of QiuNiu , which is initialized with the pretrained Chinese GPT-2 parameters .
+And a postprocess module is applied to select the high - quality lyrics by filtering and reranking the generated candidates .
+3 . The QiuNiu system and demo video are available at https://qiuniu.apps.danlu.netease.com/ and https://youtu.be/OCQNzahqWgM. 2 Architecture The architecture of QiuNiu system is shown in Figure 2 .
+It mainly consists of three modules : Passagelevel User Input , Generation Model and Postprocess .
+Each module is described in detail below .
+2.1 Passage - level User Input The module receives passage - level inputs from the user , performs appropriate pre - processings and passes the results to the trained model to generate lyrics .
+A passage - level input here refers to a piece of text that can briefly depict the main idea that the lyrics is expected to convey .
+For the example in Figure 1 , the author writes lyrics of lost love , which is based on the experiences of falling in love ( e.g. , " The boy spent half a year of his savings , accompany the girl to the concert . " ) and his own understanding of love ( e.g. , " Love comes and goes quickly , always leaves people in tears . " ) .
+A passage - level text piece is much stronger than the keywords or attributes at depicting complex stories or nuanced feelings .
+The QiuNiu system can support various forms of passage - level text inputs , such as short stories , essays , classical poetry , modern poetry .
+Though 1 .
+The paper demonstrates the QiuNiu system , which can generate Chinese lyrics from vari77  1
+𝑬𝒏𝒄𝒔 for passagelevel text
+Passagelevel text 2 3 3 𝑫𝒆𝒄𝒔 for passagelevel text level corpus covering different genres and eras from many sources .
+Specifically , the corpus contains short stories or essays collected from social medias , such as Weibo Tree Hole1 , Douban Essay2 , Micro Novel3 .
+We filtered out the noisy text and processed them into uniform format .
+Besides , we also collected refined literature from both classical and modern eras which are naturally the passagelevel text , mainly including Chinese classical poetry ( e.g. , Han Fu , Tang poetry , Song Ci , Yuan Qu , etc . ) , Chinese modern poetry with different styles ( e.g. , Philosophy , Love , Child , etc . ) .
+Finally , we obtain a passage - level corpus of 600 K that denoted as Dt .
+Pseudo - aligned Dataset : Note that the passagelevel text Dt and the lyrics Ds are not aligned .
+To help model for alignment , we further constructed a pseudo - aligned dataset Da , respectively for classical and modern text .
+For classical text , we first counted the n - gram ( n = 1 , 2 ) tokens in classical Chinese poetry of Ds .
+Then for lyrics of each Chinese Neo - traditional song which is most similar to Chinese classical text , we selected these n - gram tokens appeared in lyrics and combined them based on the format of classical Chinese poetry ( e.g. , Fivecharacter Quatrain , a four - line poetry with five characters each line ) .
+These pseudo poetry were finally paired with corresponding Chinese Neo - traditional lyrics .
+For modern text , We constructed pseudoaligned pairs with back translation .
+Specifically , for lyrics of each song , we used the API4 to first translate it into English text and then the English text was translated into Chinese plain text .
+Finally , we selected several segments of the translated plain text and reordered them , which is regarded as the aligned text with original lyrics .
+𝑫𝒆𝒄𝒕 for lyrics 1 2 Lyrics 𝑬𝒏𝒄𝒕 for lyrics 1 Alignment loss 2 Self - reconstruction loss 3 Cross - reconstruction loss Figure 3 : The framework of training the QiuNiu model .
+The framework is composed of two pairs of EncoderDecoders , one pair for passage - level text and the other for lyrics .
+And the model is jointly optimized with the self - reconstruction loss , cross - reconstruction loss and alignment loss .
+all these passage - level inputs have the same powerful semantic description capabilities , they may be different from each other in genres ( e.g. , story , poetry ) , and eras ( e.g. , classical text , modern text ) .
+In order to convert the input text into a form that can be processed by the generation model , preprocessings consists of conversion from traditional Chinese characters to simplified characters , spam filtering , error detection and correction , and conversion to token ids .
+2.2 Generation Model
+The generation model follows the Transformerbased sequence to sequence ( seq2seq ) framework ( Vaswani et al. , 2017 ) , which consists of an Encoder for source text Encs and a Decoder for target text Dect .
+In the inference phrase , it takes in passage - level user inputs and generates several candidate lyrics .
+As shown in Figure 2 , Encs encodes the passage - level text into latent representation and Dect decodes the latent representation into lyrics .
+We will describe the details of training below .
+2.2.2 Framework of Model Due to the lack of aligned corpus from passagelevel text to lyrics , we could not train the encoder and decoder of seq2seq model directly .
+Therefore , our training model adopts the framework of unsupervised machine translation ( UMT ) ( Lample et al. , 2018 ; Yang et al. , 2019 ) .
+As illustrated in Figure 3 , the framework is composed of two pairs of Encoder - Decoders , one pair Encs -Decs for passage - level text and the other Enct -Dect for lyrics .
+Encs ( or Enct ) encodes passage - level text 2.2.1 Corpus Lyircs : We collected 300 K different styles of Chinese lyrics from Internet , including Pop , Hip - hop , Chinese Neo - traditional , etc .
+For the lyrics corpus , we filtered the abnormal characters , removed lyrics less than 100 in length , and de - duplicated .
+We denote the processed lyrics corpus as Ds .
+Passage - level Text : To support various forms of passage - level text input , we collected the passage 1 https://weibo.com/ https://www.douban.com/ 3 https://www.567876.com/duanwen/weixiaoshuo/ 4
+https://fanyi.youdao.com/ 2 78  Method Two - step Training - step 1 ( Reconstruction Loss only ) - step 2 ( Alignment Loss only ) Fluency 3.05 2.74 2.81 Coherence 2.86 2.16 2.66 Relevance 2.85 2.22 3.06
+Overall Quality 2.98 2.23 2.79 Table 1 : Human evaluation results of Ablation .
+g
+g where yti and ysi are the intermediate generated lyrics or passage - level text .
+( or lyrics ) into latent representation , and Decs ( or Dect ) decodes the latent representation into passage - level text ( or lyrics ) .
+The training object is to align the passage - level text and lyrics in the latent representation space .
+Now we introduce three kinds of losses in the training process as shown in Figure 3 . 1 ) Alignment Loss : The loss tries to capture the distribution of lyrics in Dect ( or passage - level text in Decs )
+given the passage - level text in Encs ( or lyrics in Enct ) .
+It optimizes the model parameters by calculating the negative log likelihood ( NLL ) on pseudo - aligned dataset Da : X La = − log P ( yi |Dect ( Encs ( xi ) ) )
+Da − X Da log P ( xi |Decs ( Enct ( yi ) ) )
+2.2.3 Model Initialization : To make the model easier to learn and generate more fluent text , we first initialize the parameters of both the two encoder - decoder pairs with a pretrained GPT-2 model ( Radford et al. , 2019 ) .
+Note that the encoders in our system use the unidirectional self - attention to be consistent with the structure of GPT-2 .
+The pretrained GPT-2 with total 210 million parameters has 16 layers , 1,024 hidden dimensions and 16 self - attention heads .
+The GPT-2 is pretrained on about 30 G Chinese novels collected online , whose vocabulary size is 11,400 and context size is 512 .
+Two - step Training :
+Next we use a two - step training method to finetune the model .
+In the first step , we train the Encs -Dect and Enct -Decs on constructed pseudo - aligned corpus Da with alignment loss La for several epochs .
+Through this step , we improve the ability of the alignment between encoder and decoder , which is a warm - up for training on unaligned corpus .
+In the second step , the model is trained on all the corpus ( Da , Ds and Dt ) with jointly optimizing the weighted alignment loss La , self - reconstruction loss Lsr and cross - reconstruction loss Lcr .
+In this step , The corpus Ds of passage - level text and Dt of lyrics is aligned in the latent representation space ( Lample et al. , 2018 ) .
+In general , the training loss can be formulated as ( 1 ) where ( xi , yi ) ∈
+Da represent the pseudo - aligned passage - level text and lyrics respectively .
+2 ) Self - reconstruction Loss : The loss is to calculate the reconstructed distribution for passagelevel text or lyrics itself .
+Specifically , the passagelevel text ( or lyrics ) is encoded into latent representation by Encs ( or Enct ) and then decoded by Decs ( or Dect ) .
+The NLL loss is computed as X Lsr = − log P ( xsi |Decs ( Encs ( xsi ) ) )
+xsi ∈Ds − X xti ∈Dt log P ( xti |Dect
+( Enct ( xti ) ) ) ( 2 ) L = α1 La + α2 Lsr + α3 Lcr 3 ) Cross - reconstruction loss : Given a passagelevel text ( or lyrics ) , we first generate lyrics ( or passage - level text ) by Encs -Dect ( or Enct -Decs ) .
+Then the generated text is used to reconstruct the original input by Enct -Decs ( or Encs -Dect ) .
+It is formulated as X g
+Lcr = − log P ( xsi |Decs ( Enct ( yti ) ) )
+xsi ∈Ds − X xti ∈Dt Training ( 4 ) where α1 = 1 , α2 = 0 , α3 = 0 for the first step and α1 = 1 , α2 = 1 , α3 = 1 for the second step .
+2.3 Postprocess After the model training is finished , we use Encs and Dect to generate lyrics with the passage - level inputs in the inference phrase .
+Then we postprocess the candidates as followed .
+Lyrics Scoring : To select the lyrics with high quality , we trained a classifier to judge whether the g log P ( xti |Dect ( Encs ( ysi ) ) )
+( 3 ) 79  as On .
+We formulate the Scorer as follows : Scorer = PN n=1 On N |S| ( N = 4 ) ( 5 ) where |S| is the length of passage - level input .
+Finally , we rerank the lyrics filtered by an antispam process with the final score Scoref .
+Scoref = Scorel + Scorer Evaluation 3.1 Demonstration In this section , we demonstrate how the QiuNiu system works .
+And mores details are described in the demo video .
+The user input interface is shown in Figure 4 .
+Users can choose one type of the passage - level text input , write passage - level text corresponding to the chosen type or try the provided examples as input .
+After that , click the button " Generate ! " .
+Then we show some generated lyrics of different passage - level inputs , mainly including Chinese modern text and classical text .
+1 ) Modern Text : The generated lyrics of two genres ( short story , essay ) , as examples , are shown in the left and middle of Figure 5 .
+For each genre , the QiuNiu system can perform well with content expansion and produce fluent and high - quality lyrics relevant to the inputs .
+2 ) Classical Text : The QiuNiu system also supports Chinese classical poetry input .
+An example of Song Ci ( a type of Chinese classical poetry ) is shown in the right of Figure 5 .
+Note that we can also receive other types of Chinese classical poetry , such as Tang poetry , Han Fu and so on .
+We will not show their generated results due to space limitation , but they are available at the url of QiuNiu
+https://qiuniu.apps.danlu.netease.com/. On the road at dusk , I met a …… On the road at dusk , I met a beautiful girl .
+I do n't know if it was hell , or heaven .
+Figure 4 : The interface of the user input .
+Users can write multiple forms of passage - level text as input .
+Several examples of input are provided for each type .
+candidate lyrics are good and use its confidence as the lyrics score Scorel .
+We used the lyrics of popular and classic songs as positive examples and the lyrics of less played songs as negative samples .
+The model is based on pretrained Chinese Bert ( Devlin et al. , 2019 ) implemented by Transformers5 .
+Experimental results show that our model prefers to give high scores to graceful and ornate lyrics , such as metaphorical sentences , rather than the verbose and plain ones .
+Relevance Reranking :
+The metric denoted as Scorer is to measure the relevance between the passage - level inputs and the generated lyrics .
+The Scorer is computed based on the n - gram ( n = 1 , 2 , 3 , 4 ) overlapping between the passage - level input S and the generated lyrics T , which is denoted 5 3 ( 6 ) 3.2 Ablation We conduct ablation study to evaluate our two - step training framework .
+Metrics :
+We evaluate the generated lyrics from four perspectives : 1 ) Fluency : Is the lyric grammatically well formed , 2 ) Coherence : Is the lyric itself logical and consistent , 3 ) Relevance : Is the lyric relevant with the input , 4 )
+Overall quality : Is the lyric a good lyric overall subjectively .
+Note
+Overall quality is not the average score of the others .
+All the metrics are scale from 1 to 5 while 5 is the best .
+https://github.com/huggingface/transformers 80  Moonlight pass through plum blossoms , and short - leaf I walk into the coffee shop , order a cup of coffee , sit in front of the window , and drink slowly .
+It is still raining outside .
+You once said you would marry me when my hair floret is weak .
+The guest from north complains that it reached waist .
+My hair reaches the floor now .
+But blooms earlier in south .
+What make it bloom before winter ?
+why you only see the newcomer smile , not the Maybe it is passionate to spring .
+It Keeps everyone past one cry ?
+Do you know on the bridge of rebirth , intoxicated when the rain and the wind are stopped .
+I have waited for you alone for hundreds of years .
+I walk into the coffee bar
+The east wind blows down the flowers again Order a cup of coffee You once said when my hair reached waist Watching the sweetness of others You would marry me and drink wedding wine Autumn night is bored .
+I drink a pot of wine And their intimateness
+But now my hair reaches floor Sitting at the window
+Drinking slowly My eyes become blurred Moon likes a hook , and I becomes emaciated I have waited for long and never turn back Shadows are paired .
+She is teary eyes whirling
+She sings a song in the small garden Think of the past , I feel sad once again boiling wine with green plum , what make her cry Why do I have to leave away Only for the old love of that time Reminds me Those beautiful memories It has rained outside Street lights are still gorgeous
+It 's raining again here Wetting the air
+Maybe it 's been lonely for too long Maybe just leave The spring is as usual in south
+You do n't see past people cry It ’s hard to decide to leave with a beauty aside Only look at the newcomer ’s smile
+Parting is always sad Good look is never seen on her face anymore
+The road is long .
+Nothing can compare with your songs What can be seen is her tears soak the clothes
+Goose returns to the willow bank You will not see her smile My heart has been broken Only lovesickness lingers in her heart Your smile face in my dream is so lovely May fly with you in the next life Love likes river , and goes quickly with time Figure 5 : The examples of generated lyrics for different text inputs , including short story , essay , classical poetry .
+Test set : We sampled 30 passage - level inputs for each of four genres ( short story , essay , modern poetry and classical poetry ) , totally 120 samples .
+lyrics while the unsupervised step slightly reduces the relevance .
+The method Two - step Training - step 1 performs worst except in Fluency .
+This shows that the warm - up step is necessary for model to learn the connection between the input and lyrics .
+Baselines :
+We compare our 1 ) Two - step Training method with 2 ) Two - step Training - step 1 ( use reconstruction loss only .
+Here we set α1 = 0 to remove the alignment loss ) and 3 ) Two - step Training - step 2 ( use alignment loss only and can be considered as a seq2seq model with a small corpus ) .
+4 We invited 3 evaluators to evaluate all the 120 generated lyrics generated independently .
+The results are shown in Table 1 .
+All the scores are the means of 3 * 120 human evaluation results .
+Twostep training method gets around 0.2 promotion in perspectives of Fluency , Coherence and Overall Quality , which indicates the effectiveness .
+Reconstruction loss does make model acquire knowledge from more corpus and improve the fluency and coherence of the generated lyrics .
+The method Two - step Training - step 2 achieve the best in Relevance .
+The supervised learning guarantees the correlation between the input and the generated Conclusion In this paper , we demonstrate QiuNiu , a Chinese lyrics generation system conditioned on passagelevel input .
+We support various forms of passagelevel input , covering different genres and eras .
+The QiuNiu system adopts the framework of unsupervised machine translation due to the lack of aligned corpus from passage - level text to lyrics .
+Besides , the model of QiuNiu is initialized with the pretrained Chinese GPT-2 parameters and finetuned in a two - step process to improve the alignment between the passage - level text and lyrics .
+Finally , a postprocess module is used to filter and rerank the generated lyrics to select the high - quality ones .
+81  Acknowledgements Alec Radford , Jeffrey Wu , Rewon Child , David Luan , Dario Amodei , and Ilya Sutskever . 2019 .
+Language models are unsupervised multitask learners .
+OpenAI Blog , 1(8 ) .
+This work is supported by the Key Research and Development Program of Zhejiang Province ( No . 2022C01011 ) .
+Liang - Hsin Shen , Pei - Lun Tai , Chao - Chung Wu , and Shou - De Lin .
+2019 .
+Controlling sequence - tosequence models - a demonstration on neural - based acrostic generator .
+In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing ( EMNLPIJCNLP ): System Demonstrations , pages 43–48 , Hong Kong , China .
+Association for Computational Linguistics .
+References Amal Alabdulkarim , Siyan Li , and Xiangyu Peng . 2021 .
+Automatic story generation : Challenges and attempts .
+NAACL HLT 2021 , page 72 .
+Pablo Samuel Castro and Maria Attarian . 2018 .
+Combining learned lyrical structures and vocabulary for improved lyric generation .
+arXiv preprint arXiv:1811.04651 .
+Ashish Vaswani , Noam Shazeer , Niki Parmar , Jakob Uszkoreit , Llion Jones , Aidan N Gomez , Łukasz Kaiser , and Illia Polosukhin .
+2017 .
+Attention is all you need .
+In Advances in neural information processing systems , pages 5998–6008 .
+Jacob Devlin , Ming - Wei Chang , Kenton Lee , and Kristina Toutanova . 2019 .
+Bert : Pre - training of deep bidirectional transformers for language understanding .
+In NAACL - HLT ( 1 ) .
+Kento Watanabe , Yuichiroh Matsubayashi , Satoru Fukayama , Masataka Goto , Kentaro Inui , and Tomoyasu Nakano . 2018 .
+A melody - conditioned lyrics language model .
+In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies , Volume 1 ( Long Papers ) , pages 163–172 , New Orleans , Louisiana .
+Association for Computational Linguistics .
+Haoshen Fan , Jie Wang , Bojin Zhuang , Shaojun Wang , and Jing Xiao . 2019 .
+A hierarchical attention based seq2seq model for chinese lyrics generation .
+In Pacific Rim International Conference on Artificial Intelligence , pages 279–288 .
+Springer .
+Guillaume Lample , Myle Ott , Alexis Conneau , Ludovic Denoyer , and Marc’Aurelio Ranzato . 2018 .
+Phrasebased & neural unsupervised machine translation .
+In Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing , pages 5039–5049 .
+Zhichao Yang , Pengshan Cai , Yansong Feng , Fei Li , Weijiang Feng , Elena Suet - Ying Chiu , et al. 2019 .
+Generating classical chinese poems from vernacular chinese .
+In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing ( EMNLP - IJCNLP ) , pages 6156–6165 .
+Hsin - Pei Lee , Jhih - Sheng Fang , and Wei - Yun Ma . 2019 .
+iComposer : An automatic songwriting system for Chinese popular music .
+In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics ( Demonstrations ) , pages 84–88 , Minneapolis , Minnesota .
+Association for Computational Linguistics .
+Rongsheng Zhang , Xiaoxi Mao , Le Li , Lin Jiang , Lin Chen , Zhiwei Hu , Yadong Xi , Changjie Fan , and Minlie Huang . 2020 .
+Youling : an ai - assisted lyrics creation system .
+In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing : System Demonstrations , pages 85–91 .
+Piji Li , Haisong Zhang , Xiaojiang Liu , and Shuming Shi . 2020 .
+Rigid formats controlled text generation .
+arXiv preprint arXiv:2004.08022 .
+Yusen Liu , Dayiheng Liu , and Jiancheng Lv . 2020 .
+Deep poetry : A chinese classical poetry generation system .
+In Proceedings of the AAAI Conference on Artificial Intelligence , volume 34 , pages 13626 – 13627 .
+Guo Zhipeng , Xiaoyuan Yi , Maosong Sun , Wenhao Li , Cheng Yang , Jiannan Liang , Huimin Chen , Yuhui Zhang , and Ruoyu Li .
+2019 .
+Jiuge : A humanmachine collaborative chinese classical poetry generation system .
+In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics : System Demonstrations , pages 25–30 .
+Enrique Manjavacas , Mike Kestemont , and Folgert Karsdorp . 2019 .
+Generation of hip - hop lyrics with hierarchical modeling and conditional templates .
+In Proceedings of the 12th International Conference on Natural Language Generation , pages 301–310 .
+Yutao Zhu , Ruihua Song , Zhicheng Dou , NIE Jian - Yun , and Jin Zhou . 2020 .
+Scriptwriter : Narrative - guided script generation .
+In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics , pages 8647–8657 .
+Peter Potash , Alexey Romanov , and Anna Rumshisky .
+2015 .
+GhostWriter : Using an LSTM for automatic rap lyric generation .
+In Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing , pages 1919–1924 , Lisbon , Portugal .
+Association for Computational Linguistics .
+82 

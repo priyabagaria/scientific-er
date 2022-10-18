@@ -1,0 +1,416 @@
+Diverse Lottery Tickets Boost Ensemble from a Single Pretrained Model Sosuke Kobayashi1,2 Shun Kiyono3,1
+Jun Suzuki1,3
+Kentaro Inui1,3 Tohoku University1 Preferred Networks , Inc.2 RIKEN3 sosk@preferred.jp shun.kiyono@riken.jp jun.suzuki@tohoku.ac.jp inui@tohoku.ac.jp
+Abstract Ensembling is a popular method used to improve performance as a last resort .
+However , ensembling multiple models finetuned from a single pretrained model has been not very effective ; this could be due to the lack of diversity among ensemble members .
+This paper proposes Multi - Ticket Ensemble , which finetunes different subnetworks of a single pretrained model and ensembles them .
+We empirically demonstrated that winning - ticket subnetworks produced more diverse predictions than dense networks , and their ensemble outperformed the standard ensemble on some tasks .
+1 Introduction Ensembling ( Levin et al. , 1989 ; Domingos , 1997 ) has long been an easy and effective approach to improve model performance by averaging the outputs of multiple comparable but independent models .
+Allen - Zhu and Li ( 2020 ) explain that different models obtain different views for judgments , and the ensemble uses complementary views to make more robust decisions .
+A good ensemble requires diverse member models .
+However , how to encourage diversity without sacrificing the accuracy of each model is non - trivial ( Liu and Yao , 1999 ; Kirillov et al. , 2016 ; Rame and Cord , 2021 ) .
+The pretrain - then - finetune paradigm has become another best practice for achieving state - of - the - art performance on NLP tasks ( Devlin et al. , 2019 ) .
+The cost of large - scale pretraining , however , is enormously high ( Sharir et al. , 2020 ) ; This often makes it difficult to independently pretrain multiple models .
+Therefore , most researchers and practitioners only use a single pretrained model , which is distributed by resource - rich organizations .
+This situation brings up a novel question to ensemble learning : Can we make an effective ensemble from only a single pre - trained model ?
+Although ensembles can be combined with the pretrain - then - finetune paradigm , an ensemble of Figure 1 : When finetuning from a single pretrained model ( left ) , the models are less diverse ( center ) .
+If we finetune different sparse subnetworks , they become more diverse and make the ensemble effective ( right ) .
+models finetuned from a single pretrained model is much less effective than that using different pretrained models from scratch in many tasks ( Raffel et al. , 2020 ) .
+Naïve ensemble offers limited improvements , possibly due to the lack of diversity of finetuning from the same initial parameters .
+In this paper , we propose a simple yet effective method called Multi - Ticket Ensemble , ensembling finetuned winning - ticket subnetworks ( Frankle and Carbin , 2019 ) in a single pretrained model .
+We empirically demonstrate that pruning a single pretrained model can make diverse models , and their ensemble can outperform the naïve dense ensemble if winning - ticket subnetworks are found .
+2 Diversity in a Single Pretrained Model In this paper , we discuss the most standard way of ensemble , which averages the outputs of multiple neural networks ; each has the same architecture but different parameters .
+That is , let f ( x ; θ ) be the 42 Proceedings of BigScience Episode # 5 – Workshop on Challenges & Perspectives in Creating Large Language Models , pages 42 - 50 May 27 , 2022 c 2022 Association for Computational Linguistics  086
+Let layer , FINE ( ✓ , be the parameters , For diversifying tialization models more , we task - specific propose 080 ofmodel the output ( 2)s)We on a random s. 120 Also , thenew parameter of which the seed pretrained BERT let and ✓ the s represent1 088 pretrained beforeto each finetuning .
+ex 089 pect that , during finetuning , on eachaare sub - network acrandom Also , let ✓ smagnitude represent 122 finetuned fromFirst , ✓ s. we using SGDiterative depending 121 pretrained before describe pruning , 087 modelintroduce novel finetuning .
+randomness , ( 4)We pruning of the gradient 081
+aeach dataset shuffling forexstochastic descentseed the parameter of the pretrained BERT 115 and the1 task - specific layer , whose parameter isthe randomly pectdifferent that , during finetuning , each sub - network 090089 quires views using different sub - spaces of common on a random seed s.ac - pretrained Also , let ✓ of represent 122 method finding a winning ticket sub- 123 116 s BERT theHowever , parameter and the 088 during finetuning , pretrained before each We ex082 model ( SGD ) , andfinetuning .
+( 3 ) dropout noise .
+empiri - of the 089 pect that , each sub - network actask - specific layer , whose parameter is randomly initialized by random seed s.
+After finetuning 1 090 quires different views using different sub - spaces of 091 the pretrained knowledge .
+This idea has two chalparameter of the pretrained BERT and theFrankle and 123Carbin networks , exactly following 117 089 pect that , sub - network ac083 during finetuning , cally , theyeach do not necessarily lead the to diverse modtask - specific layer , whose parameter iswe randomly 124 090 quires different views using different sub - spaces of initialized by random seed s. prune After finetuning ✓ s parameter toprocedure FINE ( ✓ , We s ) , identify the 1 the pretrained knowledge .
+This idea hasthe two ( 2019 ) ’s chal092091 lenges : the diversity andWang theofaccuracy of the subtask - specific layer , whose is2s.randomly 124and experiment with several 118 090 quires different views using different sub - spaces 084 els , as Radiya - Dixit and ( 2020 ) reported initialized bybyofrandom seed s.to After finetuning 125 in ✓ FINE ( ✓ , s ) , we identify and prune the parameters with 10 % lowest magnitudes 1 091 the pretrained knowledge .
+This idea has two chalinitialized random seed s.
+After finetuning 125 s s 092 lenges : the diversity and the accuracy the sub093 networks .
+Recent studies on the lottery ticket hyvariants on the basis of this method .
+119 091 the pretrained knowledge .
+This idea has two chal085 finetuned parameters could not be far away .
+✓ 2019 ) FINE ( ✓ we identify and prune the126 126 120 ✓ we to FINE ( ✓ s ) , identify and the FINE ( ✓ alsonew getparameters , the corresponding binary parameters with 10 % lowest in1 Let FINE ( ✓ , s )
+We beprune the which magnitudes s suggest s , , s ) , sonto sticket lenges : thethe diversity and accuracy of the subs , s ) .
+092
+lenges:092
+the diversity and accuracy of theand sub094093 pothesis ( Frankle Carbin , that a we networks .
+Recent studies the lottery hy086
+For the diversifying models more , propose to | ✓ s | , where 121 witha that 10 % lowest magnitudes in also 127 are fromsmagnitudes using SGD depending mask of pruning , 2get { 0 , 093 studies on the lottery ticket hyFINE ( ✓ , ✓ s).m
+We the1}corresponding binary1 parameters 10 % lowest in 127 087
+Recent introduce a(Frankle novel randomness , ( 4)parameters pruning ofwith the s,10 % 095 dense neural network at anCarbin , initialization 094 pothesis and 2019)contains suggest afinetuned 093 networks .
+Recentnetworks .
+studies on the lottery ticket hy| ✓ s |122 FINE( ✓ sWe , s).exWe also get the corresponding binary 128 on a random seed s.
+Also , let ✓ represent 094 pothesis ( Frankle and Carbin , 2019 ) suggest that a s 088 pretrained model before each finetuning .
+the surviving positions have 1 otherwise 0 . 1 } The Pruning mask mask of pruning , m 2 { 0 , ,
+where1 Parameters 096095 sub - network , called winning ticket , whose accuracy s,10 % densesuggest neural network at an initialization contains a the corresponding FINE ( ✓ , s ) .
+We also get binary 128 s | ✓ | 094output of a pothesis ( Frankle and Carbin , 2019 ) that a s mask of pruning , ms,10 % 2 0.7 { 0,of1}1.1the , pretrained where 129 model095with thedense parameter vector θ during givenfinetuning , the parameter BERT the neural network at an initialization contains0.4each a -0.1sub - network 089 pect that , ac - accuracy -0.3 the 0 | ✓ positions 1 and pruning of parameters a1 mask m1can be129 also 1230 .
+The1 |1,bywhere 0.2
+whose 1.3network have otherwise s ✓ 097096 becomes comparable with thatmask of the dense sub - network , called ticket , of pruning , m0.2 2surviving { 0 , 1 } thesub - spaces surviving positions have 1 otherwise 0 .
+The s,10 % 095 dense neural network at contains a winning task - specific layer , whose parameter is 130 randomly 124 096 sub - network , called quires winning ticket , whose accuracy 090an initialization different views using different of -0.1 0.5 -0.3 0.4 0 1 1 1 the input x , the output of an ensemble is f ( x ) = represented as ✓ m , where is the element - wise 0.1 -0.2 -0.2 0.1 pruning of be parameters ✓ 131 by a mask m can be also1 098097
+after theM same training steps .
+A pretrained BERT becomes comparable with that of the of dense network pruning parameters ✓ byhave a mask m can alsos .
+0.After
+the surviving positions otherwise The 130 125 initialized by 1 random seed finetuning 097 becomes with that of the dense network 091comparable the pretrained knowledge .
+This idea has two chal096P sub - network , called winning ticket , whose accuracy 0.9 0.4 represented 2.9 Next , 0.3 1 replay 1 finetuning 1 0.8 ( e.g. , 0.3represented 0.2 which product .
+we as ✓ 1 m , where isbut thefrom element - wise1 099098 sparse sub - networks 50 % ) , the A2.8 pretrained as ✓ BERT m , element - wise 132
+f
+( x ; θ)/|M| , where M = also { θafter , steps .
+... , θAsame } training ✓ s where to FINE ( ✓ we identify the 098 after the same pretrained 1has s , s ) , 092 the diversity andBERT thesteps .
+accuracy of sub|M| pruning ofthe parameters bymisa-0.6the mask m1get canFINE ( ✓ beand also1prune 131 126 097 θ∈M becomes comparable with thattraining of lenges : the dense network 0.3 0.5and 1 we1 replay 1.4 with -1.2product .
+-0.5 0.450 % ) , ✓ s ✓ -1.3 1 product .
+finetuning s 133 m s,10 % s,10 % 100099 can achieve same accuracy theticket entire netNext , we replay finetuning butNext , from also has the sparse sub - networks ( e.g. , which parameters with 10 % lowest magnitudes in , s ) asbut 127 from 099 also has sparse sub - networks ( e.g. , 50 % ) , which 093 networks .
+Recent studies on the lottery hyparameters .
+represented as(Chen ✓ and m , where is thegetelement - wise 132 098is the member after the same training steps .
+A pretrained BERT well as 20%-pruning mask m .
+By repeating 1 ✓ m get FINE ( ✓ m , s ) as 134 ✓ m and get FINE ( ✓ m , s ) as FINE ( ✓ , s ) .
+We also the corresponding binary 128 s,20 % s s 101100 work when finetuning on downstream tasks s,10 % s,10 % 100 can achieve the same accuracy with the entire nets s s,10 % s,10 % can achieve theand same accuracy with the net- s 094 pothesis ( Frankle Carbin , 2019 ) suggest thatentire a | ✓ 135 -0.1
+0.2 20%-pruning 1.3 -0.2 0.4 0
+but swe Next , we replay finetuning 133 1mask 1| , m well as mask .as
+By1.4 repeating iterative magnitude obtain therepeating 1 mask ofm pruning , m 2 1 { 0,from 1 } where 129 099 also has101sparse sub - networks 50 % ) , which s,20 % work when on2020 ) .
+downstream tasks ( Chen well 20%-pruning 102101 et(e.g . , al. , it on isproduct .
+still unclear how s,10 % pruning , 095 finetuning dense neural network at an initialization contains a dis,20 % .
+By work whenHowever , finetuning downstream tasks ( Chen 0.1s -0.2 0.1 0.6FINE ( ✓ -0.4 0.2 m 0 pruning , iterative magnitude pruning , we obtain 136 1 them 1 0.InThe Diversity fromtheFinetuning the surviving positions have 1 1otherwise 130 102 et103 al. , 2020 ) .
+However , it is still unclear how di ✓ m and get , s ) as 134 parameter FINE ( ✓ , s ) .
+our exper1 096 sub - network , called winning ticket , whose accuracy s iterative magnitude we obtain the s s , P % verse winning tickets exist and how to find them s,10 % s,10 % 1002.1 can achieve same accuracy with the entire net102 et al. , 2020 ) .
+However , it is still unclear how diparameter m , s ) .
+exper137 0.8 0.3dense 2.8 network 0.2FINE( ✓ spruning 0.9s , Pof% 0.4parameters 2.2 In 0 be also by1 a30 , mask m can 131 1 i.e. , 1 evaluate 103 verse winning tickets exist and how to find 097 becomes comparable withthem that of the iments , we set0.1our P. ✓ By = ensemble well as how 20%-pruning mask m repeating parameter FINE ( ✓ m In our exper-1 s s , P % , s ) .
+135 s,20 % 103on downstream verse winning tickets exist and to find them 101 work when finetuning tasks ( Chen iments , we P = 30,0.1
+i.e. ,-1.1evaluate 138 As discussed , when constructing an ensemtasks using the BERT in thissteps . paper , same-0.5problem represented as -0.7 ✓ m , where is the element - wise 132 1.4 -1.2 0.4 sethap0.6ensemble 0 1i.e . , 098 after the same training Athe pretrained BERT ofpruning , 30%-pruning sub - networks , where M136 = ensemble 1 iments , weM set P1 = 1the 30,139 evaluate tasks using it the is BERT in in this paper , thehow same problem hapiterative obtain pens other settings generally .
+In the results by magnitude Raffel et al.sub - networks , 102 et al. , 2020 ) .
+However , still unclear diof 50 % ) , 30%-pruning = finetuning product .
+Next , where wewe replay but from 133 099 also has sparse sub - networks ( e.g. , which tasks using the BERT in this paper , the same problem happens in other settings generally .
+In the results by Raffel et al. { FINE ( ✓ m , sub - networks , sexperFINE( ✓ s|M| 1 ble fM by finetuning from a single 1 ) , ... , 140 sFINE ( ✓ ( 2020),pretrained we found that this happenedparameter on almost all the tasks of s1 , 30 % of where M = 130%-pruning { FINE ( ✓ m , s ) , ... , FINE ( ✓ m , s ) .
+In our 137 FINE( ✓ s ms,10 % , s ) as 134 Repeat and use final s ✓ s1 by ( 2020 ) , 100 we foundand that this happened on almost all the tasks of with s1set , 30 % s , P % and gets|M| 103 verse winning tickets exist how find them pens into other settings generally .
+In ( Wang the Raffel al.m1s,10 % can achieve the same accuracy theresults entire net(Wang et al. , 2018 ) , SuperGLUE et al. , 2019 ) , GLUE ( Wang et al. ,GLUE 2018 ) , SuperGLUE ( Wang etthis al. , 2019 ) , { FINE ( ✓ ms1.,30 % , s1 ) , ... , FINE ( ✓ s|M| smask ( 2020 ) , we found that happened on almost all the tasks of 2 20%-pruning model multiple times with different random seeds well as m By repeating 135 1 iments , we set P = 30 , i.e. , evaluate ensemble 138 s,20 % 101 work when finetuning on downstream tasks ( Chen 2 SQuAD ( Rajpurkar et al. , and 2016 ) , summarization , and We also did notfollowing prune the embedding layer , following SQuAD ( Rajpurkar et al. ,GLUE 2016 ) , summarization , machine We(Wang also machine didetnot prune the embedding layer , ( Wang et al. , 2018 ) , 2019 ) , iterative magnitude pruning , obtain the 136 tasks using the BERT this paper , the same problem using the models .
+Chen al.magnitude ( 2020 ) ; Prasanna et al.we ( 2020 ) 102 using al. , tends 2020 ) .
+However , it isSuperGLUE still 30%-pruning unclear di - al. , thetranslations T5etmodels .
+ChenOverview et al.how ( 2020 ) ; Prasanna et al. et ( 2020 ) Figure 2 : ofsub - networks , iterative pruning ( Sec2 of where = { s1 , ... , s|M| } , the boost translations inin performance toT5ethapSQuAD ( Rajpurkar et al. al. , 2016 ) , summarization , and machine We also did not , M prune the embedding 139 layer,137 following pens in other settings generally .
+In the results by Raffel parameter FINE ( ✓ m s s , P % s ) .
+In our exper103 verse winning tickets exist and how to find them translations using the T5 models .
+Chen et al. ( 2020 ) ; Prasanna et al. ( 2020 ) 3.1 ) .
+Wes1can also regularizers during |M| finetuning miments , , s ) , ... , FINE ( ✓ 140 138 ( 2020 ) , we found happened on almost(Devlin all the tasks of tion{FINE ( ✓ suse ensemble be only marginal .
+In that thethiscase of BERT 1 , 30%we 1set P = 30 , i.e. , sevaluate 088 2 same problem haptasks using the BERT in this paper , the GLUE ( Wang et al. , 2018 ) , SuperGLUE ( Wang et al. , 2019 ) , 2 to diversify pruning ( Section 3.2 ) .
+sub - networks , where M = of 30%-pruning pens in other settings generally .
+In the results Raffel et al. 2 et al. , 2019 ) and(Rajpurkar its variants , threesummarization , sources of and diverSQuAD et al. , 2016 ) , machine We by also did not prune the layer , 2 sembedding { FINE ( ✓ ms , 30 % , s1 ) , following ... , FINE( ✓ s ( 2020 ) , we found that this happened on almost all the tasks of using the T5 models .
+initialization Chen(Wang et al.et(2020 ) ; GLUE ( Wang et al. , 2018 ) , SuperGLUE al. , 2019),Prasanna et al. ( 2020 ) sities cantranslations be considered : random of SQuAD ( Rajpurkar et al. , 2016 ) , summarization , and machine We also did not prune the embedding layer , following using the T5 models .
+Chen et al. ( 2020 ) ; Prasanna et al. ( 2020 ) the task - specific layer , dataset shufflingtranslations for stochas3.1 Iterative Magnitude Pruning 2 tic gradient descent ( SGD ) , and dropout .
+However , 2 We employ iterative magnitude pruning ( Frankle empirically , such finetuned parameters tend not to and Carbin , 2019 ) to find winning tickets for simbe largely different from the initial parameters , and plicity .
+Other sophisticated options are left for futhey do not lead to diverse models ( Radiya - Dixit and Wang , 2020 ) .
+Of course , if one adds signifi- ture work .
+Here , we explain the algorithm ( refer ca nt noise to the parameters , it leads to diversity ; to the paper for details ) .
+The algorithm explores a good pruning mask via rehearsals of finetuning .
+however , it would also hurt accuracy .
+First , it completes a finetuning procedure of an initialized dense network and identifies the parameters 2.2 Diversity from Pruning To make models ensuring both accuracy and di- with the 10 % lowest magnitudes as the targets of pruning .
+Then , it makes the pruned subnetwork and versity , we focus on subnetworks in the pretrained resets its parameters to the originally - initialized model .
+Different subnetworks employ different subspaces of the pre - trained knowledge ( Radiya- ( sub-)parameters .
+This finetune - prune - reset proDixit and Wang , 2020 ; Zhao et al. , 2020 ; Cao et al. , cess is repeated until reaching the desired pruning ratio .
+We used 30 % as pruning ratio . 2021 ) ; this would help the subnetworks to acquire 1 1 |M| 2 different views , which can be a source of desired diversity1 .
+Also , in terms of accuracy , recent studies on the lottery ticket hypothesis ( Frankle and Carbin , 2019 ) suggest that a dense network at initialization contains a subnetwork , called the winning ticket , whose accuracy becomes comparable to that of the dense one after the same training .
+Interestingly , the pretrained BERT also has a winning ticket for finetuning on downstream tasks ( Chen et al. , 2020 ) .
+Thus , if we can find diverse winning tickets , they can be good ensemble members with the two desirable properties : diversity and accuracy .
+3 3.2 Pruning with Regularizer We discussed that finetuning with different random seeds did not lead to diverse parameters in Section 2.1 .
+Therefore , iterative magnitude pruning with different seeds could also produce less diverse subnetworks .
+Thus , we also explore means of diversifying pruning patterns by enforcing different parameters to have lower magnitudes .
+Motivated by this , we experiment with a simple approach , applying an L1 regularizer ( i.e. , magnitude decay ) to different parameters selectively depending on the random seeds .
+Specifically , we explore two policies to determine which parameters are decayed and how strongly they are , i.e. , the element - wise coefficients of the L1 regularizer , ls ∈ R≥0
+|θ| .
+During finetuning ( for pruning ) , we add a regularization term τ ||θs ⊙ ls ||1 with a positive scalar coefficient τ into the loss of the task ( e.g. , cross entropy for classification ) , where ⊙ is element - wise product .
+This softly enforces various parameters to have a lower magnitude among a set of random seeds and could lead various parameters to be pruned .
+Subnetwork Exploration
+We propose a simple yet effective method , multiticket ensemble , which finetunes different subnetworks instead of dense networks .
+Because it could be a key how to find subnetworks , we explore three variants based on iterative magnitude pruning .
+1
+Some concurrent and recent studies also investigate subnetworks for effective ensemble ( Durasov et al. , 2021 ; Havasi et al. , 2021 ) for training - from - scratch settings of image recognition .
+43 139 140 
+Active Masking To maximize the diversity of the surviving parameters of member models , it is necessary to prune the surviving parameters of the random seed s1 when building a model with the next random seed s2 .
+Thus , during finetuning with seed s2 , we apply the L1 regularizer on the first surviving parameters .
+Likewise , with the following seeds s3 , s4 , ... , si , ... , s|M| , we cumulatively use the average of the surviving masks as the regularizer coefficient mask .
+Let msj ∈ { 0 , 1}|θ| be the pruning mask indicating surviving parameters from seed P sj , the coefficient mask with seed si is lsi = j < i msj /(i − 1 ) .
+We call this affirmative policy as active masking .
+BASELINE ( BAGGING ) BASE - LT ACTIVE - LT RANDOM - LT Table 1 : The performances ( single , ens . ) and the improvements by ensembling ( diff . ) .
+Italic indicates that the value is significantly larger than that of BASELINE .
+Bold - italic indicates significantly larger than that of both BASELINE and BASE - LT .
+Underline indicates the best .
+Random Masking In active masking , each coefficient mask has a sequential dependence on the preceding random seeds .
+Thus , the training of ensemble members can not be parallelized .
+Therefore , we also experiment with a simpler and parallelizable variant , random masking , where a mask is independently and randomly generated from a random seed .
+With a random seed si , we generate the seed - dependent random binary mask , i.e. , ls = mrand ∈ { 0 , 1}|θ| , where each element is si sampled from Bernoulli distribution and 0 ’s probability equals to the target pruning ratio .
+4 MRPC STS - B single ens . diff .
+single ens . diff .
+83.48 84.34 +0.86 88.35 89.04 +0.69 82.87 84.19 +1.32 88.17 88.84 +0.68 83.84 84.98
++1.14 88.37 89.16 +0.79 83.22 84.60 +1.38 88.39 89.32 +0.94 83.53 85.05 +1.52 88.49 89.35 +0.86 Figure 3 : Comparison of the performances and the number of ensemble members on MRPC ( left ) and STS - B ( right ) .
+They are represented as the relative gain compared with BASELINE ’s accuracy .
+that , while the experiments focus on using BERT , we believe that the insights would be helpful to other pretrain - then - finetune settings in general4 .
+4.1 Experiments Accuracy We show the results on MRPC ( Dolan and Brockett , 2005 ) and STS - B ( Cer et al. , 2017 ) in Table 1 .
+Multi - ticket ensembles ( * - LT ) outperform BASE LINE and BAGGING significantly ( p < 0.001 ) .
+This result supports the effectiveness of multi - ticket ensemble .
+Note that the improvements of * - LT are attributable to ensembling ( diff . )
+rather than to any performance gains of the individual models ( single ) .
+We also plot the improvements ( ens .
+values relative to BASELINE ) as a function of the number of ensemble members on MRPC and STS - B in Figure 3 .
+This also clearly shows that while the single models of * - LT have accuracy similar to BASE LINE , the gains appear when ensembling them .
+While multi - ticket ensemble works well even with the naive pruning method ( BASE - LT ) , RANDOM - LT and ACTIVE - LT achieve the better ensembling effect on average ; this suggests the effectiveness of regularizers .
+Interestingly , RANDOM - LT is simpler but more effective than ACTIVE - LT .
+We evaluate the performance of ensembles using four finetuning schemes : ( 1 ) finetuning without pruning ( BASELINE ) , ( 2 ) finetuning of lotteryticket subnetworks found with the naïve iterative magnitude pruning ( BASE - LT ) , and ( 3 ) with L1 regularizer by the active masking ( ACTIVE - LT ) or ( 4 ) random masking ( RANDOM - LT ) .
+We also compare with ( 5 ) BAGGING - based ensemble , which trains dense models on different random 90 % training subsets .
+We use the GLUE benchmark ( Wang et al. , 2018 ) as tasks .
+The implementation and settings follow Chen et al. ( 2020)2 using the Transformers library ( Wolf et al. , 2020 ) and its bert - baseuncased pretrained model .
+We report the average performance using twenty different random seeds .
+Ensembles are evaluated using exhaustive combinations of five members .
+We also perform Student ’s t - test for validating statistical significance3 .
+Note 2
+We found a bug in Chen et al. ( 2020 ) ’s implementation on GitHub , so we fixed it and experimented with the correct version .
+3 Note that not all evaluation samples satisfy independence assumption .
+4 Raffel et al. ( 2020 ) reported that the same problem happened on almost all tasks ( GLUE ( Wang et al. , 2018 ) , SuperGLUE ( Wang et al. , 2019 ) , SQuAD ( Rajpurkar et al. , 2016 ) , summarization , and machine translation ) using the T5 model .
+44  When Winning Tickets are Less Accurate Does multi - ticket ensemble work well on any tasks ?
+The answer is no .
+To enjoy the benefit from multi - ticket ensemble , we have to find diverse winning - ticket subnetworks sufficiently comparable to their dense network .
+When winning tickets are less accurate than the baseline , their ensembles often fail to outperform the baseline ’s ensemble .
+It happened to CoLA ( Warstadt et al. , 2019 ) , QNLI ( Rajpurkar et al. , 2016 ) , SST-2 ( Socher et al. , 2013 ) , MNLI ( Williams et al. , 2018 ) ; the naive iterative magnitude pruning did not find comparable winning - ticket subnetworks ( with or sometimes even without regularizers)567 .
+Note that , even in such a case , RANDOM - LT often yielded a higher effect of ensembling ( diff . ) , while the degradation of single models canceled out the effect in total , and BAGGING also failed to improve .
+More sophisticated pruning methods ( Blalock et al. , 2020 ; Sanh et al. , 2020 ) or tuning will find better winningticket subnetworks and maximize the opportunities for multi - ticket ensemble in future work .
+BASELINE BASE - LT ACTIVE - LT RANDOM - LT Q↓ 0.96 0.93 0.94 0.94 R↑ 0.72 1.00 0.94 0.94 ND↑ -0.12 -0.11 -0.11 -0.11 D↑ 0.09 0.10 0.11 0.10 C↓ 0.69 0.62 0.62 0.63 Table 2 : Diversity metrics on MRPC .
+The signs , ↓ and ↑ , indicate that the metric gets lower and higher when the predictions are diverse .
+Q = Q statistic , R = ratio errors , ND = negative double fault , D = disagreement measure , C = correlation coefficient .
+Figure 4 : Overlap ratio of pruning masks msi between different seeds on MRPC .
+The lower ( yellower ) the value is , the more dissimilar the two masks are .
+baseline using the dense networks ( BASELINE ) .
+4.2 Diversity of Predictions 4.3 As an auxiliary analysis of behaviors , we show that each subnetwork produces diverse predictions .
+Because any existing diversity scores do not completely explain or justify the ensemble performance8 , we discuss only rough trends in five popular metrics of classification diversity ; Q statistic ( Yule , 1900 ) , ratio errors ( Aksela , 2003 ) , negative double fault ( Giacinto and Roli , 2001 ) , disagreement measure ( Skalak , 1996 ) , and correlation coefficient ( Kuncheva and Whitaker , 2003 ) .
+See Kuncheva and Whitaker ( 2003 ) ; Cruz et al. ( 2020 ) for their summarized definitions .
+As shown in Table 2 , in all the metrics , winning - ticket subnetworks ( * - LT ) produced more diverse predictions than the We finally revealed the diversity of the subnetwork structures on MRPC .
+We calculated the overlap ratio of two pruning masks , which is defined as |m ∩m
+| intersection over union , IoU = |mii ∪mjj | ( Chen et al. , 2020 ) .
+In Figure 4 , we show the overlap ratio between the pruning masks for the five random seeds , i.e. , { ms1 , ... , ms5 } .
+At first , we can see that ACTIVE - LT and RANDOM - LT using the regularizers resulted in diverse pruning .
+This higher diversity could lead to the best improvements by ensembling , as discussed in Section 4.1 .
+Secondly , BASE - LT produced surprisingly similar ( 99 % ) pruning masks with different random seeds .
+However , recall that even BASE - LT using the naïve iterative magnitude pruning performed better than BASE LINE .
+This result shows that even seemingly small changes in structure can improve the diversity of predictions and the performance of the ensemble .
+5
+Although some studies ( Prasanna et al. , 2020 ; Chen et al. , 2020 ; Liang et al. , 2021 ) reported that they found winningticket subnetworks on these tasks , our finding did not contradict it .
+Their subnetworks were often actually a little worse than their dense networks , as well as we found .
+Chen et al. ( 2020 ) defined winning tickets as subnetworks with performances within one standard deviation from the dense networks .
+Prasanna et al. ( 2020 ) considered subnetworks with even 90 % performance as winning tickets .
+6
+For example , comparing BASELINE with RANDOM LT of pruning ratio 20 % , their average values of single / ensemble / difference are 91.38/91.93/+0.55 vs. 91.09/91.90/+0.81 on SST-2 . 7
+This also happens to experiments with roberta - base while multi - ticket ensemble still works well on MRPC . 8
+Finding such a convenient diversity metric itself is still a challenge in the research community ( Wu et al. , 2021 ) .
+5 Diversity of Subnetwork Structures Conclusion We raised a question on difficulty of ensembling large - scale pretrained models .
+As an efficient remedy , we explored methods to use subnetworks in a single model .
+We empirically demonstrated that ensembling winning - ticket subnetworks could outperform the dense ensembles via diversification and indicated a limitation too .
+45  Acknowledgments William B. Dolan and Chris Brockett . 2005 .
+Automatically constructing a corpus of sentential paraphrases .
+In Proceedings of the Third International Workshop on Paraphrasing ( IWP 2005 ) .
+We appreciate the helpful comments from the anonymous reviewers .
+This work was supported by JSPS KAKENHI Grant Number JP19H04162 .
+Pedro Domingos .
+1997 .
+Why does bagging work ?
+a bayesian account and its implications .
+In Proceedings of the Third International Conference on Knowledge Discovery and Data Mining ( KDD 1997 ) , page 155–158 .
+AAAI Press .
+References Matti Aksela .
+2003 .
+Comparison of classifier selection methods for improving committee performance .
+In Proceedings of the 4th International Conference on Multiple Classifier Systems , MCS’03 , page 84–93 , Berlin , Heidelberg .
+Springer - Verlag .
+Nikita Durasov , Timur Bagautdinov , Pierre Baque , and Pascal Fua . 2021 .
+Masksembles for uncertainty estimation .
+In Proceedings of the IEEE / CVF Conference on Computer Vision and Pattern Recognition ( CVPR ) , pages 13539–13548 .
+Zeyuan Allen - Zhu and Yuanzhi Li .
+2020 .
+Towards understanding ensemble , knowledge distillation and self - distillation in deep learning .
+CoRR , abs/2012.09816 .
+Jonathan Frankle and Michael Carbin . 2019 .
+The lottery ticket hypothesis : Finding sparse , trainable neural networks .
+In Proceedings of the 7th International Conference on Learning Representations ( ICLR 2019 ) .
+Davis Blalock , Jose Javier Gonzalez Ortiz , Jonathan Frankle , and John Guttag . 2020 .
+What is the state of neural network pruning ?
+In Proceedings of Second Machine Learning and Systems ( MLSys 2020 ) , pages 129–146 .
+Yarin Gal and Zoubin Ghahramani .
+2016 .
+Dropout as a bayesian approximation : Representing model uncertainty in deep learning .
+In Proceedings of The 33rd International Conference on Machine Learning , volume 48 of Proceedings of Machine Learning Research , pages 1050–1059 , New York , New York , USA .
+PMLR .
+Steven Cao , Victor Sanh , and Alexander M. Rush . 2021 .
+Low - complexity probing via finding subnetworks .
+In Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies ( NAACL - HLT 2021 ) .
+Association for Computational Linguistics .
+Giorgio Giacinto and Fabio Roli . 2001 .
+Design of effective neural network ensembles for image classification purposes .
+Image and Vision Computing , 19(9):699–707 .
+Marton Havasi , Rodolphe Jenatton , Stanislav Fort , Jeremiah Zhe Liu , Jasper Snoek , Balaji Lakshminarayanan , Andrew Mingbo Dai , and Dustin Tran . 2021 .
+Training independent subnetworks for robust prediction .
+In International Conference on Learning Representations .
+Daniel Cer , Mona Diab , Eneko Agirre , Iñigo LopezGazpio , and Lucia Specia .
+2017 .
+SemEval-2017 task 1 : Semantic textual similarity multilingual and crosslingual focused evaluation .
+In Proceedings of the 11th International Workshop on Semantic Evaluation ( SemEval 2017 ) , pages 1–14 , Vancouver , Canada .
+Association for Computational Linguistics .
+Alexander Kirillov , Bogdan Savchynskyy , Carsten Rother , Stefan Lee , and Dhruv Batra . 2016 .
+CVPR tutorial : Diversity meets deep networks - inference , ensemble learning , and applications .
+Tianlong Chen , Jonathan Frankle , Shiyu Chang , Sijia Liu , Yang Zhang , Zhangyang Wang , and Michael Carbin . 2020 .
+The lottery ticket hypothesis for pretrained bert networks .
+In Advances in Neural Information Processing Systems 33 ( NeurIPS 2020 ) , pages 15834–15846 .
+Curran Associates , Inc.
+Ludmila I. Kuncheva and Christopher J. Whitaker . 2003 .
+Measures of diversity in classifier ensembles and their relationship with the ensemble accuracy .
+Machine Learning , 51(2):181–207 .
+Rafael M. O. Cruz , Luiz G. Hafemann , Robert Sabourin , and George D. C. Cavalcanti .
+2020 .
+Deslib : A dynamic ensemble selection library in python .
+Journal of Machine Learning Research , 21(8):1–5 . Esther Levin , Naftali Tishby , and Sara A. Solla . 1989 .
+A statistical approach to learning and generalization in layered neural networks .
+In Proceedings of the Second Annual Workshop on Computational Learning Theory ( COLT 1989 ) , page 245–260 , San Francisco , CA , USA .
+Morgan Kaufmann Publishers Inc.
+Jacob Devlin , Ming - Wei Chang , Kenton Lee , and Kristina Toutanova . 2019 .
+BERT : Pre - training of deep bidirectional transformers for language understanding .
+In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies ( NAACL - HLT 2019 ) , pages 4171–4186 , Minneapolis , Minnesota .
+Association for Computational Linguistics .
+Chen Liang , Simiao Zuo , Minshuo Chen , Haoming Jiang , Xiaodong Liu , Pengcheng He , Tuo Zhao , and Weizhu Chen . 2021 .
+Super tickets in pre - trained language models : From model compression to improving generalization .
+In Proceedings of the 59th Annual Meeting of the Association for Computational 46  Linguistics and the 11th International Joint Conference on Natural Language Processing ( Volume 1 : Long Papers ) , pages 6524–6538 , Online .
+Association for Computational Linguistics .
+Dipanjan Das , and Ellie Pavlick . 2022 .
+The multiBERTs : BERT reproductions for robustness analysis .
+In International Conference on Learning Representations ( ICLR 2022 ) .
+Ensemble learnNeural Networks , Or Sharir , Barak Peleg , and Yoav Shoham .
+2020 .
+The cost of training NLP models : A concise overview .
+CoRR , abs/2004.08900 .
+Yinhan Liu , Myle Ott , Naman Goyal , Jingfei Du , Mandar Joshi , Danqi Chen , Omer Levy , Mike Lewis , Luke Zettlemoyer , and Veselin Stoyanov . 2019 .
+RoBERTa : A robustly optimized BERT pretraining approach .
+CoRR , abs/1907.11692 .
+David B. Skalak .
+1996 .
+The sources of increased accuracy for two proposed boosting algorithms .
+In In Proc .
+American Association for Arti Intelligence , AAAI-96 , Integrating Multiple Learned Models Workshop , pages 120–125 .
+Tianyu Pang , Kun Xu , Chao Du , Ning Chen , and Jun Zhu . 2019 .
+Improving adversarial robustness via promoting ensemble diversity .
+In Proceedings of the 36th International Conference on Machine Learning , volume 97 of Proceedings of Machine Learning Research , pages 4970–4979 .
+PMLR .
+Richard Socher , Alex Perelygin , Jean Wu , Jason Chuang , Christopher D. Manning , Andrew Ng , and Christopher Potts . 2013 .
+Recursive deep models for semantic compositionality over a sentiment treebank .
+In Proceedings of the 2013 Conference on Empirical Methods in Natural Language Processing ( EMNLP 2013 ) , pages 1631–1642 , Seattle , Washington , USA .
+Association for Computational Linguistics .
+Y. Liu and X. Yao .
+1999 .
+ing via negative correlation .
+12(10):1399–1404 .
+Sai Prasanna , Anna Rogers , and Anna Rumshisky .
+2020 .
+When BERT Plays the Lottery , All Tickets Are Winning .
+In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing ( EMNLP 2020 ) , pages 3208–3229 , Online .
+Association for Computational Linguistics .
+Yi Tay , Mostafa Dehghani , Jinfeng Rao , William Fedus , Samira Abnar , Hyung Won Chung , Sharan Narang , Dani Yogatama , Ashish Vaswani , and Donald Metzler . 2022 .
+Scale efficiently : Insights from pretraining and finetuning transformers .
+In International Conference on Learning Representations .
+Evani Radiya - Dixit and Xin Wang .
+2020 .
+How fine can fine - tuning be ?
+learning efficient language models .
+In Proceedings of the Twenty Third International Conference on Artificial Intelligence and Statistics ( ICML 2020 ) , volume 108 of Proceedings of Machine Learning Research , pages 2435–2443 .
+PMLR .
+Alex Wang , Yada Pruksachatkun , Nikita Nangia , Amanpreet Singh , Julian Michael , Felix Hill , Omer Levy , and Samuel Bowman . 2019 .
+SuperGLUE : A stickier benchmark for general - purpose language understanding systems .
+In Advances in Neural Information Processing Systems 32 ( NeurIPS 2019 ) .
+Curran Associates , Inc.
+Colin Raffel , Noam Shazeer , Adam Roberts , Katherine Lee , Sharan Narang , Michael Matena , Yanqi Zhou , Wei Li , and Peter J. Liu . 2020 .
+Exploring the limits of transfer learning with a unified text - to - text transformer .
+Journal of Machine Learning Research , 21(140):1–67 .
+Alex Wang , Amanpreet Singh , Julian Michael , Felix Hill , Omer Levy , and Samuel Bowman . 2018 .
+GLUE :
+A multi - task benchmark and analysis platform for natural language understanding .
+In Proceedings of the 2018 EMNLP Workshop BlackboxNLP : Analyzing and Interpreting Neural Networks for NLP , pages 353–355 , Brussels , Belgium .
+Association for Computational Linguistics .
+Pranav Rajpurkar , Jian Zhang , Konstantin Lopyrev , and Percy Liang . 2016 .
+SQuAD : 100,000 + questions for machine comprehension of text .
+In Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing ( EMNLP 2016 ) , pages 2383–2392 , Austin , Texas .
+Association for Computational Linguistics .
+Alex Warstadt , Amanpreet Singh , and Samuel R. Bowman . 2019 .
+Neural network acceptability judgments .
+Transactions of the Association for Computational Linguistics , 7:625–641 .
+Alexandre Rame and Matthieu Cord . 2021 .
+{ DICE } : Diversity in deep ensembles via conditional redundancy adversarial estimation .
+In Proceedings of the 9th International Conference on Learning Representations ( ICLR 2021 ) .
+Victor Sanh , Thomas Wolf , and Alexander Rush . 2020 .
+Movement pruning : Adaptive sparsity by fine - tuning .
+In Advances in Neural Information Processing Systems , volume 33 , pages 20378–20389 .
+Curran Associates , Inc. Adina Williams , Nikita Nangia , and Samuel Bowman . 2018 .
+A broad - coverage challenge corpus for sentence understanding through inference .
+In Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies , Volume 1 ( Long Papers ) , pages 1112–1122 , New Orleans , Louisiana .
+Association for Computational Linguistics .
+Thibault Sellam , Steve Yadlowsky , Ian Tenney , Jason Wei , Naomi Saphra , Alexander D’Amour , Tal Linzen , Jasmijn Bastings , Iulia Raluca Turc , Jacob Eisenstein , Thomas Wolf , Lysandre Debut , Victor Sanh , Julien Chaumond , Clement Delangue , Anthony Moi , Pierric Cistac , Tim Rault , Rémi Louf , Morgan Funtowicz , 47  Joe Davison , Sam Shleifer , Patrick von Platen , Clara Ma , Yacine Jernite , Julien Plu , Canwen Xu , Teven Le Scao , Sylvain Gugger , Mariama Drame , Quentin Lhoest , and Alexander M. Rush . 2020 .
+Transformers : State - of - the - art natural language processing .
+In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing : System Demonstrations ( EMNLP 2020 ) , pages 38–45 , Online .
+Association for Computational Linguistics .
+Yanzhao Wu , Ling Liu , Zhongwei Xie , Ka - Ho Chow , and Wenqi Wei . 2021 .
+Boosting ensemble accuracy by revisiting ensemble diversity metrics .
+In Proceedings of the IEEE / CVF Conference on Computer Vision and Pattern Recognition ( CVPR ) , pages 16469 – 16477 .
+G. Udny Yule .
+1900 .
+On the association of attributes in statistics : With illustrations from the material of the childhood society , & c. Philosophical Transactions of the Royal Society of London , 194:257–319 .
+Zhilu Zhang , Vianne R. Gao , and Mert R. Sabuncu . 2021 .
+Ex uno plures :
+Splitting one model into an ensemble of subnetworks .
+Mengjie Zhao , Tao Lin , Fei Mi , Martin Jaggi , and Hinrich Schütze . 2020 .
+Masking as an efficient alternative to finetuning for pretrained language models .
+In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing ( EMNLP 2020 ) , pages 2226–2241 , Online .
+Association for Computational Linguistics .
+48  A The Setting of Fine - tuning BASELINE
+We follow the setting of Chen et al. ( 2020 ) ’s implementation ; epoch : 3 , initial learning rate : 2e-5 with linear decay , maximum sequence length : 128 , batch size : 32 , dropout probability : 0.1 .
+This is one of the most - used settings for finetuning a BERT ; e.g. , the example of finetuning in the Transformers library ( Wolf et al. , 2020 ) uses the setting9 .
+We did not prune the embedding layer , following Chen et al. ( 2020 ) ; Prasanna et al. ( 2020 ) .
+The coefficient of L1 regularizer , τ , is decayed using the same scheduler as the learning rate .
+We tuned it on MRPC and used it for other tasks .
+B ( BAGGING ) BASE - LT ACTIVE - LT RANDOM - LT Table 3 : The performances ( single , ens . ) and the improvements by ensembling ( diff . ) of RoBERTa - base models .
+D The Results with RoBERTa
+We simply conducted supplementary experiments with RoBERTa ( Liu et al. , 2019 ) ( robeta - base model ) , although optimal hyperparameters were not searched well .
+The results were similar to the cases of base - base - uncased .
+The patterns can be categorized into the three .
+First , multi - ticket ensembles worked well with roberta on MRPC , as shown in Table 3 .
+Secondly , accurate winningticket subnetworks were not found on CoLA and QNLI .
+Although the effect of ensembleing was improved after pruning , each single model got worse and the final ensemble accuracy did not outperform the dense baseline .
+Thirdly , although accurate winning - ticket subnetworks were found on STS - B and SST-2 , regularizations worsened single - model performances .
+While this case also improved the effect of ensembling , the final accuracy did not outperform the baseline .
+These experiments further emphasized the importance of development of more sophisticated pruning methods without sacrifice of model performances in the context of the lottery ticket hypothesis .
+The Learning Rate Scheduler of Chen et al. ( 2020 )
+Our implementation used in the experiments are derived from Chen et al. ( 2020 ) ’s implementation10 .
+However , we found a bug in Chen et al. ( 2020 ) ’s implementation on GitHub .
+Thus , we fixed it and experimented with the correct version .
+In their implementation , the learning rate schedule did not follow the common setting and the description mentioned in the paper ; ‘ We use standard implementations and hyperparameters [ 49 ] .
+Learning rate decays linearly from initial value to zero ’ .
+Specifically , the learning rate with linear decay did not reach zero but was at significant levels even at the end of the finetuning .
+Our implementation corrected it so that it did reach zero as specified in their paper and in the common setting .
+C MRPC STS - B single ens . diff .
+single ens . diff .
+87.77 88.47 +0.70 89.52 90.00 +0.48 87.64 88.12 +0.49 89.34 89.91 +0.54 87.72 88.25 +0.53 89.71 90.07 +0.36 87.39 88.51 +1.12 88.46 89.50 +1.04 87.86 89.26 +1.40 88.41 89.39 +0.98 The Combinations of Ensembles E In the experiments , we first prepared twenty random seeds and split them into two groups , each of which trained ten models .
+For stabilizing the measurement of the result , we exhaustively evaluated all the possible combinations of ensembles ( i.e. , depending on the number of members , 10 C2 , 10 C3 , 10 C4 , 10 C5 patterns , respectively ) among the ten models for each group , and averaged the results with the two groups .
+The performance of the members is also averaged over all the seeds .
+Related Work
+Some concurrent studies also investigate the usage of subnetworks for ensembles .
+Gal and Ghahramani ( 2016 ) is a pioneer to use subnetwork ensemble .
+A trained neural network with dropout can infer with many different subnetworks , and their ensemble can be used for uncertainty estimation , which is called MC - dropout .
+Durasov et al. ( 2021 ) improved the efficiency of MC - dropout by exploring subnetworks .
+Zhang et al. ( 2021 ) ( unpublished ) experimented with an ensemble of subnetworks of different structures and initialization when trained from scratch , while the improvements possibly could be due to regularization of each single model .
+Havasi et al. ( 2021 ) is a similar but more elegant approach , which does not explicitly identify subnetworks .
+Instead , it trains a single dense model 9 https://github.com/ huggingface / transformers / blob/ 7e406f4a65727baf8e22ae922f410224cde99ed6/ examples / pytorch / text - classification/ README.md#glue-tasks 10 https://github.com/VITA-Group/ BERT - Tickets 49  with training using multi - input multi - output inference ; the optimization can implicitly find multiple disentangled subnetworks in the dense model during optimization from random initialization .
+These studies support our assumption that different subnetworks can improve ensemble by diversity .
+Some other directions for introducing diversity exist , while most are unstable .
+Promising directions are to use entropy ( Pang et al. , 2019 ) or adversarial training ( Rame and Cord , 2021 ) .
+Although they required complex optimization processes , they improved the robustness or ensemble performance on small image recognition datasets .
+Recently , concurrent work ( Sellam et al. , 2022 ; Tay et al. , 2022 ) provide multiple BERT or T5 models pretrained from different seeds or configurations for investigation of seed or configuration dependency using large - scale computational resources .
+Further research with the models and such computational resources will be helpful for more solid comparison and analysis .
+Note that no prior work tackled the problem of ensembles from a pre - trained model .
+Framing the problem is one of the contributions of this paper .
+Secondly , our multi - ticket ensemble based on random masking enables an independently parallelizable training while existing methods require a sequential processing or a grouped training procedure .
+Finally , multi - ticket ensemble can be combined with other methods , which can improve the total performance together .
+50 

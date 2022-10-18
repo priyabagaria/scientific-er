@@ -1,0 +1,264 @@
+Disentangled Knowledge Transfer for OOD Intent Discovery with Unified Contrastive Learning Yutao Mou1∗ , Keqing He2∗ , Yanan Wu1∗ , Zhiyuan Zeng1 Hong Xu1 , Huixing Jiang2 , Wei Wu2 , Weiran Xu1∗ 1 Pattern Recognition & Intelligent System Laboratory 1 Beijing University of Posts and Telecommunications , Beijing , China 2 Meituan Group , Beijing , China { myt,yanan.wu,zengzhiyuan,xuhong,xuweiran}@bupt.edu.cn { hekeqing,jianghuixing,wuwei30}@meituan.com
+Abstract Four Different Objectives Discovering Out - of - Domain(OOD ) intents is essential for developing new skills in a taskoriented dialogue system .
+The key challenge is how to transfer prior IND knowledge to OOD clustering .
+Different from existing work based on shared intent representation , we propose a novel disentangled knowledge transfer method via a unified multi - head contrastive learning framework .
+We aim to bridge the gap between IND pre - training and OOD clustering .
+Experiments and analysis on two benchmark datasets show the effectiveness of our method .
+1 1 IND OOD IND Instance - level Head OOD Cluster - level Head Intent Representation BERT BERT IND / OOD Intents IND / OOD Intents a ) Baseline b ) Ours Figure 1 : Comparison between baselines and our proposed DKT model .
+intent classifier then uses intent representations to perform a pairwise clustering algorithm ( Chang et al. , 2017 ) .
+Further , Zhang et al. ( 2021 ) proposes an iterative clustering method , DeepAligned , to obtain pseudo supervised signals using K - means ( MacQueen , 1967 ) .
+However , all of these methods ignore the matching between IND pre - training stage and OOD clustering stage because they formulate IND pre - training as the classification task while OOD clustering as the text clustering task .
+The different learning objectives make it hard to transfer prior IND knowledge to OOD .
+Besides , previous work only transfer a single intent representation from the pre - trained IND classifier to OOD clustering .
+Considering the entanglement of the intent representation , simply transferring IND features may harm OOD clustering .
+For example , there exist two levels of intent features , instancelevel and class - level knowledge in the pre - trained IND classifier .
+Decoupling different levels of intent features helps better knowledge transferability .
+To solve the issues , we propose a novel Disentangled Knowledge Transfer method ( DKT ) via a unified multi - head contrastive learning framework to transfer disentangled IND intent representations to OOD clustering .
+The main intuition is how to perform better knowledge transfer .
+As shown in Fig 1 , we decouple the pre - trained intent representations into two independent subspaces , instance - level and class(cluster)-level using a uni Introduction Out - of - domain ( OOD ) intent discovery aims to group new unknown intents into different clusters , which helps improve the dialogue system for future development .
+Compared to existing text clustering tasks , OOD discovery considers how to leverage the prior knowledge of known in - domain ( IND ) intents to enhance discovering unknown OOD intents , which makes it challenging to directly apply existing clustering algorithms ( MacQueen , 1967 ; Xie et al. , 2016 ; Chang et al. , 2017 ; Caron et al. , 2018 ) to the OOD discovery task .
+Previous unsupervised OOD discovery models ( Hakkani - Tür et al. , 2015 ; Padmasundari and Bangalore , 2018 ; Shi et al. , 2018 ) only model OOD data but ignore prior knowledge of in - domain data thus suffer from poor performance .
+Therefore , recent work ( Lin et al. , 2020 ; Zhang et al. , 2021 ) focus more on the semi - supervised setting where they firstly pre - train an in - domain intent classifier then perform clustering algorithms on extracted OOD intent representations by the pre - trained IND intent classifier .
+For example , Lin et al. ( 2020 ) firstly pre - trains a BERT - based ( Devlin et al. , 2019 )
+IND ∗
+The first three authors contribute equally .
+Weiran Xu is the corresponding author .
+1
+We release our code at https://github.com/ myt517 / DKT . 46 Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics Volume 2 : Short Papers , pages 46 - 53 May 22 - 27 , 2022 c 2022 Association for Computational Linguistics  IND Pre - training fied contrastive learning framework .
+Different from existing OOD discovery work , we equip the traditional IND pre - training stage with a similar contrastive objective as the clustering stage .
+Specifically , we firstly learn intent features using a context encoder like BERT , then add two independent transformation heads ( instance - level head f and class - level head g ) on top of BERT .
+In the IND pre - training stage , we use the head f to perform supervised instance - level contrastive learning ( Chen et al. , 2020 ; Khosla et al. , 2020 ; Gunel et al. , 2021 ; Zeng et al. , 2021 ) and the head g to compute traditional classification loss like cross - entropy .
+In the OOD clustering stage , we employ similar objectives for these two heads where f is still used for instance - level contrastive learning and g is used to perform class(cluster)-level contrastive learning ( Li et al. , 2021 ) .
+We leave the details in the following Section 2 .
+Using the unified contrastive objectives for pre - training and clustering bridges the gap between the two stages .
+Besides , the two independent heads decouple the instance- and cluster - level contrastive learning to learn disentangled intent representations for better knowledge transfer .
+Section 4 demonstrates the effectiveness of multi - head disentanglement .
+Our contributions are three - fold : ( 1 ) We propose a novel disentangled knowledge transfer method for OOD discovery to better leverage prior IND knowledge .
+( 2 ) We propose a unified multihead contrastive learning framework to bridge the gap between IND pre - training and OOD clustering .
+( 3 ) Experiments and analysis on two benchmark datasets demonstrate the effectiveness of our method for OOD discovery .
+2 SCL OOD Clustering ILCL CLCL CE Objective Layer Cluster - level Head Instance - level Head Intent Representation Shared Layer Pooling Layer BERT IND / OOD Intents Figure 2 : The overall architecture of our DKT . backbone to extract intent representations as the previous work DeepAligned ( Zhang et al. , 2021 ) .
+Then we decouple the intent representations into two independent subspaces and use a unified contrastive learning framework to perform both IND pre - training and OOD clustering .
+IND Pre - training Different from existing methods that regard IND pre - training as a single intent classification task , we formulate it as an instancewise discriminative task and a class - wise classification task via contrastive learning .
+Given an IND intent example xi , we firstly obtain its intent representation zi using a BERT encoder and a pooling layer.2
+Then we use two independent transformation heads f and g to get two disentangled latent vectors fi = f ( zi ) and gi = g(zi ) .3
+On top of the instance - level head f , we perform supervised contrastive learning ( SCL ) ( Khosla et al. , 2020 ; Zeng et al. , 2021 ) as follows : LSCL = N X i=1 Approach N X 1 − 1i6
+= j 1yi = yj Nyi − 1 j=1 log PN exp ( fi · fj /τ )
+k=1 1i6
+= k exp ( fi · fk /τ )
+Problem Formulation
+Given a set of labeled indomain data ( XIN D , YIN D ) and unlabeled OOD data ( XOOD , YOOD ) , OOD discovery aims to cluster OOD groups from unlabeled OOD data using prior knowledge from labeled IND data .
+Note that IND data has no overlapping with OOD data .
+Generally , OOD discovery includes two stages , IND pre - training which aims to obtain a decent intent representation via labeled IND data , and OOD clustering which aims to group OOD intents into different clusters .
+Overall Architecture Fig 2 shows the overall architecture of our proposed DKT model .
+We firstly use the same BERT ( Devlin et al. , 2019 ) where Nyi is the total number of examples in the batch that have the same label as yi and 1 is an indicator function .
+Following Gao et al. ( 2021 ) ; Yan et al. ( 2021 ) , we employ simple dropout ( Srivastava et al. , 2014 ) as data augmentation .
+SCL can model instance - wise semantic similarities by pulling together IND intents belonging to the same class while pushing apart samples from different 2
+For a fair comparison , we use the same BERT - based backbone as previous work .
+We leave the details to Section 3.4 . 3
+In the experiments , we use two separate two - layer nonlinear MLPs for head f and g.
+For simplicity , we set both the input dimension and output dim to 768 , same as the hidden state dim of BERT - base .
+47  Models Unsup .
+Semi - sup .
+K - means DeepCluster DeepAligned DKT(ours )
+PTK - means DeepCluster CDAC+
+DeepAligned DKT(ours ) CLINC-10
+% ACC ARI NMI 58.67 43.81 67.77 53.15 37.80 62.31 62.66 47.60 71.50 74.22 61.37 76.67 70.22 50.39 73.92 78.13 68.31 82.87 88.00 75.18 88.33 95.11 89.81 94.13 97.78 95.16 96.97 CLINC-20 % ACC ARI NMI 48.89 30.90 64.68 47.73 34.55 65.91 48.24 34.49 66.24 57.56 44.94 72.40 57.56 37.02 72.71 83.42 76.18 89.33 84.89 75.98 89.96 93.80 90.22 95.83 96.89 93.69 96.94 CLINC-30 % ACC ARI NMI 42.22 23.65 60.55 33.96 18.89 56.21 39.02 24.50 61.16 50.07 35.53 69.81 61.63 40.96 75.90 78.09 71.05 88.70 73.04 64.44 87.90 91.56 86.58 94.91 94.96 90.25 95.94 ACC 32.81 29.81 36.56 40.00 55.00 60.59 77.50 77.78 84.69 Banking ARI NMI 8.30 17.30 7.79 17.34 12.57 21.84 18.20 30.10 36.18 53.75 41.88 55.22 60.53 71.14 66.95 76.91 71.11 76.92 Table 1 : Performance comparison on two datasets .
+We randomly sample 10 % , 20 % and 30 % of all classes as OOD types for CLINC , 10 % for Banking .
+We evaluate both unsupervised and semi - supervised methods .
+Unsup DKT denotes DKT w/o IND pre - training .
+Results are averaged over three random runs .
+( p < 0.05 under t - test ) classes .
+Therefore , SCL helps maximize inter - class variance and minimize intra - class variance , further improves OOD clustering .
+On top of the class - level head g , we use a cross - entropy classification loss to learn class(cluster)-wise distinction .
+Section 4 confirms both the objectives improve the performance and SCL has a larger effect .
+follows : ` clu i , j = − log P2 K exp ( sim ( yi , yj ) /τ )
+k=1 1[k6 = i ] exp ( sim ( yi , yk ) /τ )
+where yj is the dropout - augmented cluster representation of yi and sim denotes cosine distance .
+Following Li et al. ( 2021 ) , we also add a regularization item to avoid the trivial solution that most instances are assigned to the single cluster .
+For training , we simply add the above objectives in the experiments .
+For inference , we only use the clusterlevel contrastive head and compute the argmax to get the cluster results without additional K - means .
+Generally , the instance - CL focuses on distinguishing different intent samples while the cluster - CL identifies distinct OOD categories .
+Combining the two stages , our proposed unified contrastive learning framework can effectively bridge the gap between IND pre - training and OOD clustering .
+OOD Clustering The key challenge of OOD clustering is how to learn intent representations and cluster assignments .
+Previous state - of - the - art model DeepAligned ( Zhang et al. , 2021 ) iteratively repeats the two stages which results in poor clustering efficiency and accuracy .
+Thus , we propose an end - to - end contrastive clustering method ( Li et al. , 2021 ) to jointly learn representations and cluster assignments .
+Specifically , given an OOD example xi , we firstly use the pre - trained BERT encoder and transformation heads to get OOD intent latent vectors fi and gi .
+Then , on top of the instancelevel head f , we perform instance - level contrastive learning(ILCL ) ( Chen et al. , 2020 ) as follows : exp ( sim ( fi , fj ) /τ )
+` ins i , j = − log P2N k=1 1[k6 = i ] exp ( sim ( fi , fk ) /τ )
+3 Experiment 3.1 Datasets We show the detailed statistics of CLINC(Larson et al. , 2019 ) and BANKING(Casanueva et al. , 2020 ) datasets in Table 2 .
+CLINC contains 22,500 queries covering 150 intents and Banking contains 13,083 customer service queries with 77 intents .
+To construct IND / OOD data , we ramdomly divided the two datasets in three ramdom runs , according to the specified OOD ratio(10 % , 20 % , 30 % for CLINC , 10 % for Banking ) , and the rest is IND data .
+Note that we only use the IND data for pretraining and use OOD data for clustering .
+To avoid the randomness of splitting IND / OOD , we average results over three random runs .
+For each run , all the models use the same divided dataset .
+Different from previous work Zhang et al. ( 2021 ) , we assume that the unlabeled data only contains OOD data instead of a mixture of IND and OOD , aiming to fairly evaluate the OOD clustering performance .
+where fj denotes the dropout - augmented OOD sample and τ denotes temperature 4 .
+On top of the cluster - level head g , we perform contrastive clustering following Li et al. ( 2021 ) .
+Specifically , given an OOD cluster - level latent vector gi , we firstly project it to a vector with dimension K which equals to the pre - defined cluster number.5 Suppose we input a batch of OOD samples so we can get a feature matrix of N
+× K.
+Then we regard i - th column of the matrix as the i - th cluster representation yi and construct cluster - level CL(CLCL ) as 4 we set it to 0.5 in the experiments .
+In this paper , we focus on the fixed cluster number K setting and leave estimating K to future work .
+5 48  Dataset Classes Training Validation Test Vocabulary Length ( max / mean )
+CLINC BANKING 150 77 18,000 9,003 2,250 1,000 2,250 3,080 7,283 5,028 28 / 8.31 79 / 11.91 for the cluster - level contrastive head , the dimensionality of the column space is naturally set to the number of IND classes / OOD clusters , and the cluster - level temperature parameter τ = 1.0 is used for all datasets .
+We use SC of validation OOD data ( still unlabeled data ) to choose the best checkpoint .
+The pre - training stage of our model lasts about 30 minutes and clustering runs for 10 minutes on CLINC-10 % , both using a single Tesla T4 GPU(16 GB of memory ) .
+Table 2 : Statistics of CLINC and BANKING datasets .
+In real scenarios , we can use OOD detection models ( Xu et al. , 2020 ; Zeng et al. , 2021 ) to collect high - quality OOD data for OOD intent discovery .
+3.2 Baselines We mainly compare our method with semisupervised baselines : PTK - means ( k - means with IND pre - training ) , DeepCluster ( Caron et al. , 2018 ) and two state - of - the - art OOD discovery methods CDAC+
+( Lin et al. , 2020 ) and DeepAligned ( Zhang et al. , 2021 ) .
+We also report the unsupervised results ( without IND pretraining ) of these methods for a comprehensive comparison .
+For fairness , we use the same BERT backbone as the baselines .
+We leave the detailed baselines in the appendix A.1 .
+3.5 Table 1 shows the performance comparison of different models on two datasets .
+Under both unsupervised and semi - supervised settings , our proposed DKT consistently outperforms all the baselines .
+In this paper , we mainly focus on the latter setting .
+For the Semi - sup setting on CLINC10 % , DKT outperforms the previous state - of - theart DeepAligned by 2.67%(ACC ) , 5.35%(ARI ) , 2.84%(NMI ) .
+Similar improvements are observed on other datasets .
+The results prove the effectiveness of our proposed disentangled knowledge transfer for OOD discovery .
+Comparing Unsup DKT with Semi - sup DKT , the latter significantly outperforms the former by 23.56%(ACC ) , 33.79%(ARI ) , 20.30%(NMI ) , which demonstrates the effectiveness of IND pre - training(see details in appendix A.2 ) .
+3.3 Evaluation Metrics We adopt three widely used metrics to evaluate the clustering results : Accuracy ( ACC ) , Normalized Mutual Information ( NMI ) , and Adjusted Rand Index ( ARI ) .
+To calculate ACC , we use the Hungarian algorithm ( Kuhn , 1955 ) to obtain the mapping between the predicted classes and groundtruth classes .
+3.4 Implementation Details 4
+For a fair comparison with previous work , we use the pre - trained BERT model ( bert - base - uncased 6 , with 12 - layer transformer ) as our network backbone , and add a pooling layer to get intent representation(dimension=768 ) .
+Moreover , we freeze all but the last transformer layer parameters to achieve better performance with BERT backbone , and speed up the training procedure as suggested in ( Zhang et al. , 2021 ) .
+During the pre - training phase , the training batch size is 128 , and during the clustering phase , the training batch size is 512 for CLINC-10 % , CLINC-30 % , Banking-10 % , and 400 for CLINC-20 % .
+The learning rate is 5e-5 in the pre - training phase and 0.0003 in the clustering phase .
+Notably , We use dropout ( Gao et al. , 2021 ) to construct augmented examples for contrastive learning with dropout rate 0.1 .
+For the instance - level contrastive head , the dimensionality of the row space is set to 128 , and the temperatures of SCL and instance - level CL are 0.5 .
+As 6 Main Results Qualitative Analysis Effect of Disentangled Intent Representations Tab 3 shows performance comparison of DKT and KT under two settings .
+We find Disentangled KT significantly outperforms KT both on two settings , which proves the effectiveness of representation disentanglement for knowledge transfer .
+Visualization To confirm the effectiveness of DKT , we perform OOD intent representation visualization of DeepAligned , KT and DKT in Fig 3 .
+Note that we use the same representation following the pooling layer for fair comparison .
+We find both DeepAligned and KT have some mixed OOD clusters while DKT forms clearly separate decision boundaries between clusters , which shows our proposed DKT obtains discriminative OOD representations for OOD discovery .
+Besides , Section 4 further explore the effect of different layer and representations after MLP g gets the best performance .
+Error Analysis
+We further analyze the error cases of DeepAligned and DKT in Fig 5 .
+We find that for https://github.com/google-research/bert 49  60 60 60 40 40 40 20 20 20 0 0 0 20 20 20 40 40 40 60 60 60 60 40 20 0 20 40 60 60 40 20 ( a ) DeepAligned 0 20 40 60 60 40 20 ( b ) KT 0 20 40 60 ( c ) DKT Figure 3 : Visualization of different methods .
+KT denotes only using single MLP head .
+60 60 60 40 40 40 20 20 0 0 20 20 40 40 20 0 20 40 60 60 40 20 0 20 40 60 60 60 ( a ) Instance - level head 40 20 0 20 40 60 80 ( b ) BERT + pooling layer 60 40 20 0 20 40 60 ( c ) Cluster - level head Figure 4 : Intent representations at different layers True Clusters deepaligned DKT Model ( a ) 0 7 0 0 0 86 0 0 0 0 0 7 0 0 0 93 0 0 0 0 0 0 0 0 0 0 7 0 0 0 ( a ) ( b ) 0 93 0 0 0 0 0 0 0 0 0 0 0 0 7 0 100 0 0 0 0 0 0 0 0 0 0 0 0 0 ( b ) ( c ) 0 0 100 0 0 0 0 0 0 0 0 0 0 0 0 0 0 100 0 0 0 0 0 0 0 0 0 0 0 0 ( c ) ( d ) 0 0 0 100 0 0 0 0 0 0 0 0 0 0 0 0 0 0 100 0 0 0 0 0 0 0 0 0 0 0 ( d ) ( e ) 0 0 0 0 100 0 0 0 0 0 0 0 0 0 0 ( e ) 0 0 0 0 100 0 0 0 0 0 0 0 0 0 0 ( f ) 0 0 0 0 0 100 0 0 0 0 0 0 0 0 0 0 0 0 0 0 100 0 0 0 0 0 0 0 0 0 ( f ) ( g ) 0 0 0 0 0 0 100 0 0 0 0 0 0 0 0 0 0 0 0 0 0 100 0 0 0 0 0 0 0 0 ( g ) ( h ) 0 0 0 0 0 0 0 100 0 0 0 0 0 0 0 0 7 0 0 0 0 0 86 0 0 0 0 7 0 0 ( h ) ( i ) 0 0 0 0 0 0 0 0 93 0 7 0 0 0 0 0 0 0 0 0 0 0 0 93 0 7 0 0 0 0 ( j ) 0 0 0 0 0 0 0 0 0 86 0 0 0 14 0 0 0 0 0 0 0 0 0 0 93 0 0 0 7 0 ( j ) ( k ) ( k ) 0 0 0 0 0 0 0 0 0 100 0
+( l ) 0 0 0 0 0 0 0 0 0 0 0 ( m ) 27 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 7 0 0 0 0 0 7 0 0 0 0 0 0 0 0 ( o ) Unsup . 80 Semi - sup .
+60 0 0 0 0 0 0 0 0 0 0 0 0 0 100 0 100 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 73 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 86 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 93 0 0 0 0 0 0 0 0 0 0 ( a ) ( b ) ( c ) ( d ) ( e ) ( f ) ( g ) ( h ) ( i ) ( j ) ( k ) ( l ) ( m ) ( n ) ( o ) 0 0 0 100 0 0 0
+( l ) 0 100 0 0 ( m ) 0 0 0 100 0 ( n ) 0 0 0 0 100 ( o ) KT DKT KT DKT ACC 68.89 74.22 95.11 97.78 ARI 56.33 61.37 90.23 95.16 NMI 73.93 76.67 94.53 96.97 Table 3 : Effect of disentangled intent representations .
+( i ) 40 0 ( n ) Models 100 Models DKT -w / o SCL -w / o CE -w / o ILCL -w / o CLCL 20 0 ( a ) ( b ) ( c ) ( d ) ( e ) ( f ) ( g ) ( h ) ( i ) ( j ) ( k ) ( l ) ( m ) ( n ) ( o )
+Predict Clusters ( a)smart_home ( b)spending_history ( c)tire_pressure ( d)lost_luggage ( e)cancel ( f)reset_settings ( g)book_flight ( h)where_are_you_from ( i)bill_due ( j)accept_reservations ( k)expiration_date ( l)timezone ( m)new_card ( n)cancel_reservation ( o)income Figure 5 : Confusion matrix for the clustering results of DeepAligned and DKT on CLINC-10 % .
+The percentage values along the diagonal represent how many samples are correctly clustered into the corresponding class .
+The larger the number , the deeper the color .
+ACC 97.78 92.26 95.16 90.93 90.36 ARI 95.16 86.33 90.61 85.43 82.91 NMI 96.97 92.62 94.80 92.07 90.55 Table 4 : Effect of different learning objectives .
+BERT + pooling in Fig 4 .
+We can find that the output obtained by instance - level head forms a narrow and long cluster distribution , while the output obtained by cluster - level head forms a more compact and uniform cluster distribution .
+We argue that this reflects the effect of decoupling , that is , instance - level head decouples the uniqueness of each sample , and cluster - level head decouples the category characteristics of each sample .
+similar OOD intents
+, DeepAligned is probably confused but our DKT can effectively distinguish them .
+For example , DeepAligned incorrectly groups accept_reservation intents into cancel_reservation ( 14 % error rate ) vs DKT(7 % ) , which proves DKT helps separate semantically similar OOD intents .
+Ablation Study To understand the effect of different objectives of DKT , we perform abalation study in Tab 4 by removing each loss .
+Results show all the losses contribute to the performance especially SCL , ILCL and CLCL , which confirms the effectiveness of our unified contrastive framework .
+Intent Representations at Different Layers
+In order to further explore the effectiveness of disentangled representation , we visualize the output vectors of instance - level head and cluster - level head and compare them with the output vector after 5 Conclusion In this paper , we propose a novel disentangled knowledge transfer method ( DKT ) via a unified multi - head contrastive learning framework to transfer disentangled IND intent representations to OOD clustering .
+Experiments and analysis on two benchmarks demonstrate the effectiveness of DKT for OOD discovery .
+We hope to explore more selfsupervised representation learning methods for OOD discovery in the future .
+50  Acknowledgements Jacob Devlin , Ming - Wei Chang , Kenton Lee , and Kristina Toutanova . 2019 .
+BERT : Pre - training of deep bidirectional transformers for language understanding .
+In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics : Human Language Technologies , Volume 1 ( Long and Short Papers ) , pages 4171–4186 , Minneapolis , Minnesota .
+Association for Computational Linguistics .
+We thank all anonymous reviewers for their helpful comments and suggestions .
+This work was partially supported by National Key R&D Program of China
+No . 2019YFF0303300 and Subject II No . 2019YFF0303302 , DOCOMO Beijing Communications Laboratories Co. , Ltd , MoE - CMCC " Artifical Intelligence " Project No . MCM20190701 .
+Tianyu Gao , Xingcheng Yao , and Danqi Chen . 2021 .
+Simcse :
+Simple contrastive learning of sentence embeddings .
+ArXiv , abs/2104.08821 .
+Broader Impact Task - oriented dialogue systems have demonstrated remarkable performance across a wide range of applications , with the promise of a significant positive impact on human production mode and lifeway .
+Intent classification is an important component of Task - oriented dialogue system .
+The existing intent classification models follow a closed set assumption and can only identify a limited number of predefined intent types .
+However , the real world is open .
+During the online deployment of dialogue system , out - of - domain ( OOD ) or unknown intents will appear continually .
+Recently , out - of - domain intent detection task has been widely studied , which can be used to collect these new intent data .
+The OOD intent discovery task studied in this paper is to make further use of these new intent data .
+It aims to cluster these OOD samples according to intents , so as to mine new intent types automatically , guide the future development of the system , and expand the classification ability of intent classification models .
+Beliz Gunel , Jingfei Du , Alexis Conneau , and Ves Stoyanov . 2021 .
+Supervised contrastive learning for pre - trained language model fine - tuning .
+ArXiv , abs/2011.01403 .
+Dilek Hakkani - Tür , Yun - Cheng Ju , Geoffrey Zweig , and Gokhan Tur . 2015 .
+Clustering novel intents in a conversational interaction system with semantic parsing .
+In Sixteenth Annual Conference of the International Speech Communication Association .
+Prannay Khosla , Piotr Teterwak , Chen Wang , Aaron Sarna , Yonglong Tian , Phillip Isola , Aaron Maschinot , Ce Liu , and Dilip Krishnan . 2020 .
+Supervised contrastive learning .
+ArXiv , abs/2004.11362 .
+H. Kuhn .
+1955 .
+The hungarian method for the assignment problem .
+Naval Research Logistics Quarterly , 2:83–97 .
+Stefan Larson , Anish Mahendran , Joseph J. Peper , Christopher Clarke , Andrew Lee , Parker Hill , Jonathan K. Kummerfeld , Kevin Leach , Michael A. Laurenzano , Lingjia Tang , and Jason Mars . 2019 .
+An evaluation dataset for intent classification and out - of - scope prediction .
+In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing ( EMNLP - IJCNLP ) .
+References Mathilde Caron , Piotr Bojanowski , Armand Joulin , and Matthijs Douze . 2018 .
+Deep clustering for unsupervised learning of visual features .
+In Proceedings of the European Conference on Computer Vision ( ECCV ) , pages 132–149 .
+Yunfan Li , Peng Hu , Zitao Liu , Dezhong Peng , Joey Tianyi Zhou , and Xi Peng . 2021 .
+Contrastive clustering .
+In 2021 AAAI Conference on Artificial Intelligence ( AAAI ) .
+Iñigo Casanueva , Tadas Temčinas , Daniela Gerz , Matthew Henderson , and Ivan Vulić. 2020 .
+Efficient intent detection with dual sentence encoders .
+In Proceedings of the 2nd Workshop on Natural Language Processing for Conversational AI , pages 38–45 , Online .
+Association for Computational Linguistics .
+Ting - En Lin , Hua Xu , and Hanlei Zhang . 2020 .
+Discovering new intents via constrained deep adaptive clustering with cluster refinement .
+In Proceedings of the AAAI Conference on Artificial Intelligence , volume 34 , pages 8360–8367 .
+Jianlong Chang , L. Wang , Gaofeng Meng , Shiming Xiang , and Chunhong Pan . 2017 .
+Deep adaptive image clustering .
+2017 IEEE International Conference on Computer Vision ( ICCV ) , pages 5880–5888 .
+J. MacQueen .
+1967 .
+Some methods for classification and analysis of multivariate observations .
+Ting Chen , Simon Kornblith , Mohammad Norouzi , and Geoffrey E. Hinton . 2020 .
+A simple framework for contrastive learning of visual representations .
+ArXiv , abs/2002.05709 . Padmasundari and S. Bangalore . 2018 .
+Intent discovery through unsupervised semantic text clustering .
+In INTERSPEECH . 51  ACC 100 80 DKT DeepAligned PTK - means ACC 100 Chen Shi , Qi Chen , Lei Sha , Sujian Li , Xu Sun , Houfeng Wang , and Lintao Zhang .
+2018 .
+Autodialabel :
+Labeling dialogue data with unsupervised learning .
+In Proceedings of the 2018 conference on empirical methods in natural language processing , pages 684–689 . 60 DKT DeepAligned PTK - means 60 1.0 Nitish Srivastava , Geoffrey E. Hinton , A. Krizhevsky , Ilya Sutskever , and R. Salakhutdinov . 2014 .
+Dropout : a simple way to prevent neural networks from overfitting .
+J. Mach .
+Learn .
+Res . , 15:1929–1958 .
+80 0.8 0.6 0.4 0.2 ( a ) Ratio of IND class numbers 1.0 0.8 0.6 0.4 0.2 ( b ) Ratio of IND sample numbers Figure 6 : Effect of IND Data .
+Junyuan Xie , Ross B. Girshick , and Ali Farhadi . 2016 .
+Unsupervised deep embedding for clustering analysis .
+ArXiv , abs/1511.06335 . representation learning .
+The cluster header parameters need to be reinitialized during each iteration .
+In the semi - supervised setting , we use the same IND pre- training objective as DeepAligned ( Zhang et al. , 2021 )
+Hong Xu , Keqing He , Yuanmeng Yan , Sihong Liu , Zijun Liu , and Weiran Xu .
+2020 .
+A deep generative distance - based classifier for out - of - domain detection with mahalanobis space .
+In Proceedings of the 28th International Conference on Computational Linguistics , pages 1452–1460 , Barcelona , Spain ( Online ) .
+International Committee on Computational Linguistics .
+• CDAC+
+The first work of new intent discovery proposed by ( Lin et al. , 2020 ) , and it firstly pre - trains a BERT - based ( Devlin et al. , 2019 ) in - domain intent classifier then uses intent representations to calculate the similarity of OOD intent pairs as weak supervised signals .
+Yuanmeng Yan , Rumei Li , Sirui Wang , Fuzheng Zhang , Wei Wu , and Weiran Xu . 2021 .
+Consert :
+A contrastive framework for self - supervised sentence representation transfer .
+In ACL / IJCNLP .
+•
+DeepAligned The second work of new intent discovery proposed by ( Zhang et al. , 2021).It is an improved version of DeepCluster .
+It designed a pseudo label alignment strategy to produce aligned cluster assignments for better representation learning .
+Zhiyuan Zeng , Keqing He , Yuanmeng Yan , Zijun Liu , Yanan Wu , Hong Xu , Huixing Jiang , and Weiran Xu .
+2021 .
+Modeling discriminative representations for out - of - domain detection with supervised contrastive learning .
+In Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing ( Volume 2 : Short Papers ) , pages 870–878 , Online .
+Association for Computational Linguistics .
+A.2 We analyze the effect of IND data for OOD discovery from two perspectives , the number of IND classes and samples per class .
+Figure 6(a ) shows the trend of the number of different IND classes , and Figure 6(b ) shows the trend of the number of different samples in each class .
+Results show DKT outperforms baselines under all settings and gets the smallest varying degrees of performance drop , which proves the robustness and stability of our method .
+Hanlei Zhang , Hua Xu , Ting - En Lin , and Rui Lyu . 2021 .
+Discovering new intents with deep aligned clustering .
+In Proceedings of the AAAI Conference on Artificial Intelligence , volume 35 , pages 14365 – 14373 .
+A Effect of IND Data Appendix A.3 A.1 Baselines
+The details of baselines are as follows : Visualization at Different Training Epochs To see the evolution of our method in the training process , we show a visualization at four different timestamps throughout the training process in Fig 7 .
+Results show representation vector of different intent classes are mixed in the beginning and cluster assignments become increasingly visible and distinct as the training process goes .
+• PTK - means A method based on k - means with IND pre - training .
+And the IND pretraining objectives uses CE + SCL proposed in this paper .
+•
+DeepCluster An iterative clustering algorithm proposed by ( Caron et al. , 2018 ) , in each iteration , firstly , k - means is used to assign pseudo label to the unlabeled samples , and then the cross - entropy objective is used for 52  60 60 40 40 20 20 0 0 20 20 40 40 60 60 40 20 0 20 60 40 60 ( a ) Epoch=0 ( NMI=19.85 ) 40 20 0 20 40 ( b ) Epoch=4 ( NMI=80.29 ) 60 60 40 40 20 20 0 0 20 20 40 40 60 60 60 40 20 0 20 40 60 60 ( c ) Epoch=8 ( NMI=92.32 ) 40 20 0 20 40 60 ( d ) Epoch=14 ( NMI=96.97 ) Figure 7 : OOD intent visualization of different training epochs for our proposed DKT method .
+53 
