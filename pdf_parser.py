@@ -30,7 +30,8 @@ def pdf_to_tokens(pdf):
 
 def extract_text(pdf):
     text = textract.process(pdf)
-    text = text.decode()
+    text = text.decode('utf-8')
+    
     return text
 
 def parse_text(text):
